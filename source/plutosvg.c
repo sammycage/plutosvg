@@ -2497,7 +2497,7 @@ static double resolve_gradient_length(const render_context_t* context, const len
     return resolve_length(context, length, mode);
 }
 
-static plutovg_color_t find_gradient_stop_color(const element_t* e)
+static plutovg_color_t find_stop_color(const element_t* e)
 {
     paint_t paint = {.type=paint_type_none};
     parse_paint(e, ID_STOP_COLOR, &paint);
@@ -2512,10 +2512,10 @@ static plutovg_color_t find_gradient_stop_color(const element_t* e)
         return color;
     }
 
-    return find_gradient_stop_color(parent);
+    return find_stop_color(parent);
 }
 
-static double find_gradient_stop_opacity(const element_t* e)
+static double find_stop_opacity(const element_t* e)
 {
     double opacity;
     if(parse_number(e, ID_STOP_OPACITY, &opacity, 1))
@@ -2525,21 +2525,23 @@ static double find_gradient_stop_opacity(const element_t* e)
     if(parent == NULL)
         return 1.0;
 
-    return find_gradient_stop_opacity(parent);
+    return find_stop_opacity(parent);
 }
 
 static void resolve_gradient_stops(plutovg_gradient_t* gradient, const element_t* e)
 {
-    for(;e;e = e->next)
+    while(e != NULL)
     {
-        if(e->id != TAG_STOP)
-            continue;
+        if(e->id == TAG_STOP)
+        {
+            double offset = 0.0;
+            parse_number(e, ID_OFFSET, &offset, 1);
+            plutovg_color_t color = find_stop_color(e);
+            color.a = find_stop_opacity(e);
+            plutovg_gradient_add_stop_color(gradient, offset, &color);
+        }
 
-        double offset = 0.0;
-        parse_number(e, ID_OFFSET, &offset, 1);
-        plutovg_color_t color = find_gradient_stop_color(e);
-        double opacity = find_gradient_stop_opacity(e);
-        plutovg_gradient_add_stop_rgba(gradient, offset, color.r, color.g, color.b, opacity);
+        e = e->next;
     }
 }
 
@@ -2633,6 +2635,45 @@ static plutovg_paint_t* resolve_radial_gradient(const render_context_t* context,
     return paint;
 }
 
+static plutovg_color_t find_solid_color(const element_t* e)
+{
+    paint_t paint = {.type=paint_type_none};
+    parse_paint(e, ID_SOLID_COLOR, &paint);
+    if(paint.type == paint_type_color)
+        return paint.color;
+
+    const element_t* parent = e->parent;
+    if(parent == NULL)
+    {
+        plutovg_color_t color;
+        plutovg_color_init_rgb(&color, 0, 0, 0);
+        return color;
+    }
+
+    return find_solid_color(parent);
+}
+
+static double find_solid_opacity(const element_t* e)
+{
+    double opacity;
+    if(parse_number(e, ID_SOLID_OPACITY, &opacity, 1))
+        return opacity;
+
+    const element_t* parent = e->parent;
+    if(parent == NULL)
+        return 1.0;
+
+    return find_solid_opacity(parent);
+}
+
+static plutovg_paint_t* resolve_solid_color(const element_t* e)
+{
+    plutovg_color_t color = find_solid_color(e);
+    color.a = find_solid_opacity(e);
+
+    return plutovg_paint_create_color(&color);
+}
+
 static plutovg_paint_t* resolve_paint(const render_context_t* context, const paint_t* paint)
 {
     if(paint->type == paint_type_none)
@@ -2651,6 +2692,8 @@ static plutovg_paint_t* resolve_paint(const render_context_t* context, const pai
         return resolve_linear_gradient(context, ref);
     if(ref->id == TAG_RADIAL_GRADIENT)
         return resolve_radial_gradient(context, ref);
+    if(ref->id == TAG_SOLID_COLOR)
+        return resolve_solid_color(ref);
 
     return NULL;
 }

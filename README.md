@@ -3,7 +3,7 @@ plutosvg is a tiny SVG rendering library in C
 
 ## Features
 - Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
-- Paint Servers : solidColor(TODO), linearGradient, radialGradient, pattern(TODO)
+- Paint Servers : solidColor, linearGradient, radialGradient, pattern(TODO)
 - Document Structures: defs, svg, g, use, symbol
 - Coordinate Systems, Transformations and Units
 - Texts (TODO) : text, tspan
