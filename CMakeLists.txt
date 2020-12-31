@@ -6,10 +6,16 @@ project(plutosvg C)
 
 set(PLUTOSVG_SOURCE
     plutosvg.c
-    plutosvg.h)
+    plutosvg.h
+)
 
 add_library(plutosvg STATIC ${PLUTOSVG_SOURCE})
 
-set(PLUTOVG_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/plutovg/include)
 add_subdirectory(plutovg)
-target_include_directories(plutosvg PUBLIC ${PLUTOVG_HEADER})
+add_subdirectory(example)
+
+target_include_directories(plutosvg
+PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/plutovg/include"
+)
