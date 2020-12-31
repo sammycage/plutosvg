@@ -1690,6 +1690,7 @@ static hashmap_t* hashmap_create(void)
     map->buckets = calloc(16, sizeof(hashmap_entry_t*));
     map->size = 0;
     map->capacity = 16;
+    memset(map->buckets, 0, (size_t)map->capacity * sizeof(hashmap_entry_t*));
     return map;
 }
 
@@ -1732,6 +1733,7 @@ static void hashmap_expand(hashmap_t* map)
     {
         int newcapacity = map->capacity << 1;
         hashmap_entry_t** newbuckets = calloc((size_t)newcapacity, sizeof(hashmap_entry_t*));
+        memset(newbuckets, 0, (size_t)newcapacity * sizeof(hashmap_entry_t*));
 
         for(int i = 0;i < map->capacity;i++)
         {
