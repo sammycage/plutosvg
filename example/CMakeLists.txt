@@ -1,7 +1,10 @@
-file(GLOB PLUTOVG_EXAMPLE_FILES "*.c")
+cmake_minimum_required(VERSION 3.3)
 
-foreach(EXAMPLE_FILENAME ${PLUTOVG_EXAMPLE_FILES})
-    get_filename_component(EXAMPLE_TARGET ${EXAMPLE_FILENAME} NAME_WE)
-    add_executable(${EXAMPLE_TARGET} ${EXAMPLE_FILENAME})
-    target_link_libraries(${EXAMPLE_TARGET} plutosvg m)
-endforeach()
+set(CMAKE_C_STANDARD 99)
+
+project(example C)
+
+add_executable(example example.c)
+target_link_libraries(example plutosvg m)
+
+FILE(COPY camera.svg DESTINATION "${CMAKE_BINARY_DIR}/example")

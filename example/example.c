@@ -1,14 +1,3 @@
-# PlutoSVG
-plutosvg is a tiny SVG rendering library in C
-
-## Features
-- Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
-- Paint Servers : solidColor, linearGradient, radialGradient, pattern(TODO)
-- Document Structures: defs, svg, g, use, symbol
-- Texts (TODO) : text, tspan
-
-## Example
-```c
 #include <plutosvg.h>
 
 #include <stdlib.h>
@@ -27,9 +16,3 @@ int main(void)
     plutovg_surface_destroy(surface);
     return 0;
 }
-
-```
-
-output :
-
-![camera.png](camera.png)
