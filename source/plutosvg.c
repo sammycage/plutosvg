@@ -922,9 +922,12 @@ static int parse_transform_list(const element_t* e, int id, plutovg_matrix_t* ma
             break;
         case transform_type_rotate:
             if(count == 1)
+            {
                 plutovg_matrix_rotate(matrix, values[0]*PI/180.0);
+            }
             else
             {
+                plutovg_matrix_translate(matrix, values[1], values[2]);
                 plutovg_matrix_rotate(matrix, values[0]*PI/180.0);
                 plutovg_matrix_translate(matrix, -values[1], -values[2]);
             }
