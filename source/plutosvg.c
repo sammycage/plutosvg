@@ -1716,8 +1716,8 @@ static int hashmap_eq(const hashmap_entry_t* entry, const char* a, const char* a
     const char* b = key->start;
     const char* b_end = key->end;
 
-    int a_size = (int)(a - a_end);
-    int b_size = (int)(b - b_end);
+    int a_size = (int)(a_end - a);
+    int b_size = (int)(b_end - b);
     if(a_size != b_size)
         return 0;
 
