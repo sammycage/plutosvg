@@ -2972,8 +2972,8 @@ static void render_ellipse(render_context_t* context, const element_t* e)
 
     double _cx = resolve_length(context, &cx, 'x');
     double _cy = resolve_length(context, &cy, 'y');
-    double _rx = resolve_length(context, &rx, 'o');
-    double _ry = resolve_length(context, &ry, 'o');
+    double _rx = resolve_length(context, &rx, 'x');
+    double _ry = resolve_length(context, &ry, 'y');
 
     render_context_push(context, e);
 
@@ -3060,8 +3060,8 @@ static void render_rect(render_context_t* context, const element_t* e)
     parse_length(e, ID_RX, &rx, 0);
     parse_length(e, ID_RY, &ry, 0);
 
-    double _rx = resolve_length(context, &rx, 'o');
-    double _ry = resolve_length(context, &ry, 'o');
+    double _rx = resolve_length(context, &rx, 'x');
+    double _ry = resolve_length(context, &ry, 'y');
 
     if(!length_valid(&rx)) _rx = _ry;
     if(!length_valid(&ry)) _ry = _rx;
