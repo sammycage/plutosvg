@@ -1540,7 +1540,6 @@ static int parse_spread_method(const element_t* e, int id, plutovg_spread_method
 
 enum {
     display_inline,
-    display_block,
     display_none
 };
 
@@ -1552,9 +1551,7 @@ static int parse_display(const element_t* e, int id, int* display)
 
     const char* ptr = value->start;
     const char* end = value->end;
-    if(string_eq(ptr, end, "block"))
-        *display = display_block;
-    else if(string_eq(ptr, end, "none"))
+    if(string_eq(ptr, end, "none"))
         *display = display_none;
     else
         *display = display_inline;
@@ -1563,7 +1560,6 @@ static int parse_display(const element_t* e, int id, int* display)
 
 enum {
     visibility_visible,
-    visibility_collapse,
     visibility_hidden
 };
 
@@ -1575,9 +1571,7 @@ static int parse_visibility(const element_t* e, int id, int* visibility)
 
     const char* ptr = value->start;
     const char* end = value->end;
-    if(string_eq(ptr, end, "collapse"))
-        *visibility = visibility_collapse;
-    else if(string_eq(ptr, end, "hidden"))
+    if(string_eq(ptr, end, "hidden"))
         *visibility = visibility_hidden;
     else
         *visibility = visibility_visible;
@@ -1841,7 +1835,7 @@ static void parse_property(element_t* element, heap_t* heap, int id, const char*
             start = ptr;
             while(ptr < end && *ptr!=';')
                 ++ptr;
-            parse_property( element, heap, id, start, ptr);
+            parse_property(element, heap, id, start, ptr);
             skip_ws_delimiter(&ptr, end, ';');
         }
     }
@@ -2040,6 +2034,8 @@ static document_t* parse_document(const char* data, int size)
             }
             else
             {
+                if(root && current == NULL)
+                    break;
                 element = heap_alloc(heap, sizeof(element_t));
                 element->id = id;
                 element->parent = NULL;
@@ -2098,7 +2094,7 @@ static document_t* parse_document(const char* data, int size)
     }
 
     skip_ws(&ptr, end);
-    if(ptr != end || ignore != 0)
+    if(root == NULL || ptr != end || ignore != 0)
     {
         hashmap_destroy(cache);
         heap_destroy(heap);
