@@ -501,15 +501,8 @@ static int length_relative(const length_t* length)
     return 0;
 }
 
-static int length_zero(const length_t* length)
-{
-    return length->value == 0.0;
-}
-
-static int length_valid(const length_t* length)
-{
-    return length->units != length_unit_unknown;
-}
+#define length_zero(length) (length.value == 0.0)
+#define length_valid(length) (length.units != length_unit_unknown)
 
 enum {
     paint_type_none,
@@ -2651,8 +2644,8 @@ static plutovg_paint_t* resolve_radial_gradient(const render_context_t* context,
     double _fx = resolve_gradient_length(context, &fx, units, 'x');
     double _fy = resolve_gradient_length(context, &fy, units, 'y');
 
-    if(!length_valid(&fx)) _fx = _cx;
-    if(!length_valid(&fy)) _fy = _cy;
+    if(!length_valid(fx)) _fx = _cx;
+    if(!length_valid(fy)) _fy = _cy;
 
     plutovg_paint_t* paint = plutovg_paint_create_radial(_cx, _cy, _r, _fx, _fy, 0);
     plutovg_gradient_t* gradient = plutovg_paint_get_gradient(paint);
@@ -2780,7 +2773,7 @@ static void render_svg(render_context_t* context, const element_t* e)
     parse_length(e, ID_WIDTH, &w, 0);
     parse_length(e, ID_HEIGHT, &h, 0);
 
-    if(length_zero(&w) || length_zero(&h))
+    if(length_zero(w) || length_zero(h))
         return;
 
     length_t x = {0, length_unit_px};
@@ -2812,7 +2805,7 @@ static void render_use(render_context_t* context, const element_t* e)
     parse_length(e, ID_WIDTH, &w, 0);
     parse_length(e, ID_HEIGHT, &h, 0);
 
-    if(length_zero(&w) || length_zero(&h))
+    if(length_zero(w) || length_zero(h))
         return;
 
     length_t x = {0, length_unit_px};
@@ -2957,7 +2950,7 @@ static void render_ellipse(render_context_t* context, const element_t* e)
     parse_length(e, ID_RX, &rx, 0);
     parse_length(e, ID_RY, &ry, 0);
 
-    if(length_zero(&rx) || length_zero(&ry))
+    if(length_zero(rx) || length_zero(ry))
         return;
 
     length_t cx = {0, length_unit_px};
@@ -2995,7 +2988,7 @@ static void render_circle(render_context_t* context, const element_t* e)
 
     length_t r = {0, length_unit_px};
     parse_length(e, ID_R, &r, 0);
-    if(length_zero(&r))
+    if(length_zero(r))
         return;
 
     length_t cx = {0, length_unit_px};
@@ -3036,7 +3029,7 @@ static void render_rect(render_context_t* context, const element_t* e)
     parse_length(e, ID_WIDTH, &w, 0);
     parse_length(e, ID_HEIGHT, &h, 0);
 
-    if(length_zero(&w) || length_zero(&h))
+    if(length_zero(w) || length_zero(h))
         return;
 
     length_t x = {0, length_unit_px};
@@ -3059,8 +3052,8 @@ static void render_rect(render_context_t* context, const element_t* e)
     double _rx = resolve_length(context, &rx, 'x');
     double _ry = resolve_length(context, &ry, 'y');
 
-    if(!length_valid(&rx)) _rx = _ry;
-    if(!length_valid(&ry)) _ry = _rx;
+    if(!length_valid(rx)) _rx = _ry;
+    if(!length_valid(ry)) _ry = _rx;
 
     render_context_push(context, e);
 
