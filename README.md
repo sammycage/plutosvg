@@ -38,6 +38,8 @@ output :
 Install [cmake](https://cmake.org/download/) if not already installed
 
 ```
+git clone --recursive https://github.com/sammycage/plutosvg.git
+cd plutosvg
 mkdir build
 cd build
 cmake ..
