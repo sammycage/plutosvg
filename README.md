@@ -33,3 +33,16 @@ int main(void)
 output :
 
 ![camera.png](camera.png)
+
+## Build
+Install [cmake](https://cmake.org/download/) if not already installed
+
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+## Support
+If you like what we do, [you can buy us a coffee](https://www.patreon.com/sammycage)
