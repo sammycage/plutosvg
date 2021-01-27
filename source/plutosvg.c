@@ -3110,7 +3110,7 @@ static void render_children(render_context_t* context, const element_t* e)
     }
 }
 
-static void document_dimensions(const document_t* document, const plutovg_font_t* font, int* width, int* height, double dpi)
+static void document_dimensions(const document_t* document, const plutovg_font_t* font, double* width, double* height, double dpi)
 {
     length_t w = {0, length_unit_percent};
     length_t h = {0, length_unit_percent};
@@ -3118,31 +3118,31 @@ static void document_dimensions(const document_t* document, const plutovg_font_t
     parse_length(document->root, ID_WIDTH, &w, 0);
     parse_length(document->root, ID_HEIGHT, &h, 0);
 
-    double _w = length_value(&w, 1.0, dpi);
-    double _h = length_value(&h, 1.0, dpi);
+    *width = length_value(&w, 1.0, dpi);
+    *height = length_value(&h, 1.0, dpi);
 
-    plutovg_rect_t viewbox = {0, 0, 0, 0};
-    parse_view_box(document->root, ID_VIEW_BOX, &viewbox);
+    if(length_relative(&w) || length_relative(&h))
+    {
+        plutovg_rect_t viewbox = {0, 0, 0, 0};
+        parse_view_box(document->root, ID_VIEW_BOX, &viewbox);
 
-    if(length_relative(&w)) _w = viewbox.w;
-    if(length_relative(&h)) _h = viewbox.h;
+        if(length_relative(&w)) *width = viewbox.w;
+        if(length_relative(&h)) *height = viewbox.h;
+    }
 
-    if(_w == 0.0 || _h == 0.0)
+    if(*width == 0.0 || *height == 0.0)
     {
         render_context_t* context = render_context_create(document, font, dpi);
         render_state_t* state = context->state;
-        state->viewport.w = _w;
-        state->viewport.h = _h;
+        state->viewport.w = *width;
+        state->viewport.h = *height;
         render_element(context, document->root);
 
-        if(_w == 0.0) _w = state->bbox.w;
-        if(_h == 0.0) _h = state->bbox.h;
+        if(*width == 0.0) *width = state->bbox.w;
+        if(*height == 0.0) *height = state->bbox.h;
 
         render_context_destroy(context);
     }
-
-    if(width) *width = (int)(ceil(_w));
-    if(height) *height = (int)(ceil(_h));
 }
 
 plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const plutovg_font_t* font, int width, int height, double dpi)
@@ -3151,9 +3151,9 @@ plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const p
     if(document == NULL)
         return NULL;
 
-    int w, h;
+    double w, h;
     document_dimensions(document, font, &w, &h, dpi);
-    if(w == 0 || h == 0)
+    if(w == 0.0 || h == 0.0)
     {
         document_destroy(document);
         return NULL;
@@ -3161,22 +3161,22 @@ plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const p
 
     if(width == 0 && height == 0)
     {
-        width = w;
-        height = h;
+        width = (int)(ceil(w));
+        height = (int)(ceil(h));
     }
     else if(width != 0 && height == 0)
     {
-        height = width * h / w;
+        height = (int)(ceil(width * h / w));
     }
     else if(height != 0 && width == 0)
     {
-        width = height * w / h;
+        width = (int)(ceil(height * w / h));
     }
 
     render_context_t* context = render_context_create(document, font, dpi);
     plutovg_surface_t* surface = plutovg_surface_create(width, height);
     render_state_t* state = context->state;
-    plutovg_matrix_scale(&state->matrix, (double)width / w, (double)height / h);
+    plutovg_matrix_scale(&state->matrix, width / w, height / h);
     state->canvas = canvas_create_for_surface(surface);
     state->viewport.w = w;
     state->viewport.h = h;
@@ -3212,8 +3212,12 @@ int plutosvg_dimensions_from_memory(const char* data, int size, const plutovg_fo
     if(document == NULL)
         return 0;
 
-    document_dimensions(document, font, width, height, dpi);
+    double w, h;
+    document_dimensions(document, font, &w, &h, dpi);
     document_destroy(document);
+
+    if(width) *width = (int)(ceil(w));
+    if(height) *height = (int)(ceil(w));
     return 1;
 }
 
