@@ -38,6 +38,19 @@ static inline int string_eq(const char* ptr, const char* end, const char* str)
     return ptr == end;
 }
 
+static const char* string_find(const char* ptr, const char* end, const char* str)
+{
+    while(ptr < end)
+    {
+        const char* start = ptr;
+        if(skip_string(&ptr, end, str))
+            return start;
+        ++ptr;
+    }
+
+    return NULL;
+}
+
 static inline int skip_ws(const char** begin, const char* end)
 {
     const char* ptr = *begin;
@@ -639,8 +652,8 @@ static document_t* parse_document(const char* data, int size)
             ++ptr;
             if(skip_string(&ptr, end, "--"))
             {
-                const char* sub = strstr(ptr, "-->");
-                if(sub >= end || sub == NULL)
+                const char* sub = string_find(ptr, end, "-->");
+                if(sub == NULL)
                     break;
 
                 ptr += (sub - ptr) + 3;
@@ -650,8 +663,8 @@ static document_t* parse_document(const char* data, int size)
 
             if(skip_string(&ptr, end, "[CDATA["))
             {
-                const char* sub = strstr(ptr, "]]>");
-                if(sub >= end || sub == NULL)
+                const char* sub = string_find(ptr, end, "]]>");
+                if(sub == NULL)
                     break;
 
                 ptr += (sub - ptr) + 3;
