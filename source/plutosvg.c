@@ -88,77 +88,6 @@ static inline int skip_ws_comma(const char** begin, const char* end)
     return skip_ws_delimiter(begin, end, ',');
 }
 
-static inline int parse_double(const char** begin, const char* end, double* number)
-{
-    const char* ptr = *begin;
-    double integer, fraction;
-    int sign, expsign, exponent;
-
-    fraction = 0;
-    integer = 0;
-    exponent = 0;
-    sign = 1;
-    expsign = 1;
-
-    if(ptr < end && *ptr == '+')
-        ++ptr;
-    else if(ptr < end && *ptr == '-')
-    {
-        ++ptr;
-        sign = -1;
-    }
-
-    if(ptr >= end || (!IS_NUM(*ptr) && *ptr != '.'))
-        return 0;
-
-    if(*ptr != '.')
-    {
-        while(*ptr && IS_NUM(*ptr))
-            integer = 10.0 * integer + (*ptr++ - '0');
-    }
-
-    if(ptr < end && *ptr == '.')
-    {
-        ++ptr;
-        if(ptr >= end || !IS_NUM(*ptr))
-            return 0;
-        double div = 1.0;
-        while(ptr < end && IS_NUM(*ptr))
-        {
-            fraction = 10.0 * fraction + (*ptr++ - '0');
-            div *= 10.0;
-        }
-
-        fraction /= div;
-    }
-
-    if(ptr < end && (*ptr == 'e' || *ptr == 'E')
-       && (ptr[1] != 'x' && ptr[1] != 'm'))
-    {
-        ++ptr;
-        if(ptr < end && *ptr == '+')
-            ++ptr;
-        else if(ptr < end && *ptr == '-')
-        {
-            ++ptr;
-            expsign = -1;
-        }
-
-        if(ptr >= end || !IS_NUM(*ptr))
-            return 0;
-
-        while(ptr < end && IS_NUM(*ptr))
-            exponent = 10 * exponent + (*ptr++ - '0');
-    }
-
-    *begin = ptr;
-    *number = sign * (integer + fraction);
-    if(exponent)
-        *number *= pow(10.0, expsign*exponent);
-
-    return *number >= -DBL_MAX && *number <= DBL_MAX;
-}
-
 enum {
     ID_UNKNOWN = 0,
     ID_COLOR,
@@ -372,6 +301,499 @@ typedef struct element {
     struct property* property;
 } element_t;
 
+#define CHUNK_SIZE 4096
+typedef struct _heap_chunk {
+    struct _heap_chunk* next;
+} heap_chunk_t;
+
+typedef struct {
+    heap_chunk_t* chunk;
+    size_t size;
+} heap_t;
+
+static heap_t* heap_create(void)
+{
+    heap_t* heap = malloc(sizeof(heap_t));
+    heap->chunk = NULL;
+    heap->size = 0;
+    return heap;
+}
+
+static void* heap_alloc(heap_t* heap, size_t size)
+{
+    size = (size + 7ul) & ~7ul;
+    if(heap->chunk == NULL || heap->size + size > CHUNK_SIZE)
+    {
+        heap_chunk_t* chunk = malloc(sizeof(heap_chunk_t) + CHUNK_SIZE);
+        chunk->next = heap->chunk;
+        heap->chunk = chunk;
+        heap->size = 0;
+    }
+
+    void* data = (char*)(heap->chunk) + sizeof(heap_chunk_t) + heap->size;
+    heap->size += size;
+    return data;
+}
+
+static void heap_destroy(heap_t* heap)
+{
+    heap_chunk_t* chunk = heap->chunk;
+    while(chunk)
+    {
+        heap_chunk_t* n = chunk->next;
+        free(chunk);
+        chunk = n;
+    }
+
+    free(heap);
+}
+
+typedef struct hashmap_entry {
+    int hash;
+    string_t key;
+    void* value;
+    struct hashmap_entry* next;
+} hashmap_entry_t;
+
+typedef struct {
+    hashmap_entry_t** buckets;
+    int size;
+    int capacity;
+} hashmap_t;
+
+static hashmap_t* hashmap_create(void)
+{
+    hashmap_t* map = malloc(sizeof(hashmap_t));
+    map->buckets = calloc(16, sizeof(hashmap_entry_t*));
+    map->size = 0;
+    map->capacity = 16;
+    return map;
+}
+
+static int hashmap_hash(const char* ptr, const char* end)
+{
+    int size = (int)(end - ptr);
+    int h = size;
+    for(int i = 0;i < size;i++)
+    {
+        h = h * 31 + *ptr;
+        ++ptr;
+    }
+
+    return h;
+}
+
+static int hashmap_eq(const hashmap_entry_t* entry, const char* a, const char* a_end)
+{
+    const string_t* key = &entry->key;
+    const char* b = key->start;
+    const char* b_end = key->end;
+
+    int a_size = (int)(a_end - a);
+    int b_size = (int)(b_end - b);
+    if(a_size != b_size)
+        return 0;
+
+    for(int i = 0;i < a_size;i++)
+    {
+        if(a[i] != b[i])
+            return 0;
+    }
+
+    return 1;
+}
+
+static void hashmap_expand(hashmap_t* map)
+{
+    if(map->size > (map->capacity * 3 / 4))
+    {
+        int newcapacity = map->capacity << 1;
+        hashmap_entry_t** newbuckets = calloc((size_t)newcapacity, sizeof(hashmap_entry_t*));
+
+        for(int i = 0;i < map->capacity;i++)
+        {
+            hashmap_entry_t* entry = map->buckets[i];
+            while(entry)
+            {
+                hashmap_entry_t* next = entry->next;
+                size_t index = (size_t)(entry->hash) & (size_t)(newcapacity - 1);
+                entry->next = newbuckets[index];
+                newbuckets[index] = entry;
+                entry = next;
+            }
+        }
+
+        free(map->buckets);
+        map->buckets = newbuckets;
+        map->capacity = newcapacity;
+    }
+}
+
+static void hashmap_put(hashmap_t* map, heap_t* heap, const char* ptr, const char* end, void* value)
+{
+    int hash = hashmap_hash(ptr, end);
+    size_t index = (size_t)(hash) & (size_t)(map->capacity - 1);
+
+    hashmap_entry_t** p = &map->buckets[index];
+    while(1)
+    {
+        hashmap_entry_t* current = *p;
+        if(current == NULL)
+        {
+            hashmap_entry_t* entry = heap_alloc(heap, sizeof(hashmap_entry_t));
+            string_init(entry->key, ptr, end);
+            entry->hash = hash;
+            entry->value = value;
+            entry->next = NULL;
+            *p = entry;
+            map->size += 1;
+            hashmap_expand(map);
+            break;
+        }
+
+        if(current->hash==hash && hashmap_eq(current, ptr, end))
+        {
+            current->value = value;
+            break;
+        }
+
+        p = &current->next;
+    }
+}
+
+static void* hashmap_get(hashmap_t* map, const char* ptr, const char* end)
+{
+    int hash = hashmap_hash(ptr, end);
+    size_t index = (size_t)(hash) & (size_t)(map->capacity - 1);
+
+    hashmap_entry_t* entry = map->buckets[index];
+    while(entry)
+    {
+        if(entry->hash==hash && hashmap_eq(entry, ptr, end))
+            return entry->value;
+        entry = entry->next;
+    }
+
+    return NULL;
+}
+
+static void hashmap_destroy(hashmap_t* map)
+{
+    free(map->buckets);
+    free(map);
+}
+
+typedef struct {
+    element_t* root;
+    hashmap_t* cache;
+    heap_t* heap;
+} document_t;
+
+#define IS_CSS_STARTNAMECHAR(c) (IS_ALPHA(c) || c == '_')
+#define IS_CSS_NAMECHAR(c) (IS_CSS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-')
+static void parse_property(element_t* element, heap_t* heap, int id, const char* ptr, const char* end)
+{
+    if(id < MAX_STYLE && string_eq(ptr, end, "inherit"))
+        return;
+
+    if(id == ID_STYLE)
+    {
+        while(ptr < end && IS_CSS_STARTNAMECHAR(*ptr))
+        {
+            const char* start = ptr;
+            ++ptr;
+            while(ptr < end && IS_CSS_NAMECHAR(*ptr))
+                ++ptr;
+            int id = csspropertyid(start, ptr);
+            skip_ws(&ptr, end);
+            if(ptr >= end || *ptr!=':')
+                return;
+            ++ptr;
+            skip_ws(&ptr, end);
+            start = ptr;
+            while(ptr < end && *ptr!=';')
+                ++ptr;
+            if(id != ID_UNKNOWN)
+                parse_property(element, heap, id, start, ptr);
+            skip_ws_delimiter(&ptr, end, ';');
+        }
+    }
+
+    if(ptr >= end)
+        return;
+
+    property_t* property = heap_alloc(heap, sizeof(property_t));
+    property->id = id;
+    string_init(property->value, ptr, end);
+    property->next = element->property;
+    element->property = property;
+}
+
+#define IS_STARTNAMECHAR(c) (IS_ALPHA(c) ||  c == '_' || c == ':')
+#define IS_NAMECHAR(c) (IS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-' || c == '.')
+static int parse_attributes(const char** begin, const char* end, element_t* element, hashmap_t* cache, heap_t* heap)
+{
+    const char* ptr = *begin;
+    while(ptr < end && IS_STARTNAMECHAR(*ptr))
+    {
+        const char* start = ptr;
+        ++ptr;
+        while(ptr < end && IS_NAMECHAR(*ptr))
+            ++ptr;
+
+        int id = dompropertyid(start, ptr);
+        skip_ws(&ptr, end);
+        if(ptr >= end || *ptr!='=')
+            return 0;
+        ++ptr;
+
+        skip_ws(&ptr, end);
+        if(ptr >= end || (*ptr!='"' && *ptr!='\''))
+            return 0;
+
+        const char quote = *ptr;
+        ++ptr;
+        skip_ws(&ptr, end);
+        start = ptr;
+        while(ptr < end && *ptr!=quote)
+            ++ptr;
+        if(ptr >= end || *ptr!=quote)
+            return 0;
+        if(id && element)
+        {
+            if(id == ID_ID)
+                hashmap_put(cache, heap, start, ptr, element);
+            else
+                parse_property(element, heap, id, start, ptr);
+        }
+
+        ++ptr;
+        skip_ws(&ptr, end);
+    }
+
+    *begin = ptr;
+    return 1;
+}
+
+static document_t* parse_document(const char* data, int size)
+{
+    const char* ptr = data;
+    const char* end = ptr + size;
+
+    heap_t* heap = heap_create();
+    hashmap_t* cache = hashmap_create();
+    element_t* root = NULL;
+    element_t* current = NULL;
+    int ignore = 0;
+    while(ptr < end)
+    {
+        while(ptr < end && *ptr != '<')
+            ++ptr;
+
+        if(ptr >= end || *ptr != '<')
+            break;
+
+        ++ptr;
+        if(ptr < end && *ptr == '/')
+        {
+            ++ptr;
+            if(ptr >= end || !IS_STARTNAMECHAR(*ptr))
+                break;
+
+            ++ptr;
+            while(ptr < end && IS_NAMECHAR(*ptr))
+                ++ptr;
+
+            skip_ws(&ptr, end);
+            if(ptr >= end || *ptr != '>')
+                break;
+
+            if(ignore > 0)
+                ignore--;
+            else if(current && current->parent)
+                current = current->parent;
+
+            ++ptr;
+            continue;
+        }
+
+        if(ptr < end && *ptr == '?')
+        {
+            ++ptr;
+            if(!skip_string(&ptr, end, "xml"))
+                break;
+
+            skip_ws(&ptr, end);
+            if(!parse_attributes(&ptr, end, NULL, NULL, NULL))
+                break;
+
+            if(!skip_string(&ptr, end, "?>"))
+                break;
+
+            skip_ws(&ptr, end);
+            continue;
+        }
+
+        if(ptr < end && *ptr == '!')
+        {
+            ++ptr;
+            if(skip_string(&ptr, end, "--"))
+            {
+                const char* sub = strstr(ptr, "-->");
+                if(sub >= end || sub == NULL)
+                    break;
+
+                ptr += (sub - ptr) + 3;
+                skip_ws(&ptr, end);
+                continue;
+            }
+
+            if(skip_string(&ptr, end, "[CDATA["))
+            {
+                const char* sub = strstr(ptr, "]]>");
+                if(sub >= end || sub == NULL)
+                    break;
+
+                ptr += (sub - ptr) + 3;
+                skip_ws(&ptr, end);
+                continue;
+            }
+
+            if(skip_string(&ptr, end, "DOCTYPE"))
+            {
+                while(ptr < end && *ptr != '>')
+                {
+                    if(*ptr=='[')
+                    {
+                        ++ptr;
+                        int depth = 1;
+                        while(ptr < end && depth > 0)
+                        {
+                            if(*ptr=='[') ++depth;
+                            else if(*ptr==']') --depth;
+                            ++ptr;
+                        }
+                    }
+                    else
+                    {
+                        ++ptr;
+                    }
+                }
+
+                if(ptr >= end || *ptr != '>')
+                    break;
+
+                ptr += 1;
+                skip_ws(&ptr, end);
+                continue;
+            }
+
+            break;
+        }
+
+        if(ptr >= end || !IS_STARTNAMECHAR(*ptr))
+            break;
+
+        const char* start = ptr;
+        ++ptr;
+        while(ptr < end && IS_NAMECHAR(*ptr))
+            ++ptr;
+
+        element_t* element = NULL;
+        if(ignore > 0)
+        {
+            ignore++;
+        }
+        else
+        {
+            int id = domelementid(start, ptr);
+            if(id == TAG_UNKNOWN)
+            {
+                ignore = 1;
+            }
+            else
+            {
+                if(root && current == NULL)
+                    break;
+                element = heap_alloc(heap, sizeof(element_t));
+                element->id = id;
+                element->parent = NULL;
+                element->next = NULL;
+                element->first = NULL;
+                element->last = NULL;
+                element->property = NULL;
+                if(root == NULL)
+                {
+                    if(element->id != TAG_SVG)
+                        break;
+                    root = element;
+                }
+                else
+                {
+                    element->parent = current;
+                    if(current->last)
+                    {
+                        current->last->next = element;
+                        current->last = element;
+                    }
+                    else
+                    {
+                        current->last = element;
+                        current->first = element;
+                    }
+                }
+            }
+        }
+
+        skip_ws(&ptr, end);
+        if(!parse_attributes(&ptr, end, element, cache, heap))
+            break;
+
+        if(ptr < end && *ptr == '>')
+        {
+            if(element)
+                current = element;
+            ++ptr;
+            continue;
+        }
+
+        if(ptr < end && *ptr == '/')
+        {
+            ++ptr;
+            if(ptr >= end || *ptr != '>')
+                break;
+
+            if(ignore > 0)
+                ignore--;
+            ++ptr;
+            continue;
+        }
+
+        break;
+    }
+
+    skip_ws(&ptr, end);
+    if(root == NULL || ptr != end || ignore != 0)
+    {
+        hashmap_destroy(cache);
+        heap_destroy(heap);
+        return NULL;
+    }
+
+    document_t* document = malloc(sizeof(document_t));
+    document->root = root;
+    document->cache = cache;
+    document->heap = heap;
+    return document;
+}
+
+static void document_destroy(document_t* document)
+{
+    hashmap_destroy(document->cache);
+    heap_destroy(document->heap);
+    free(document);
+}
+
 static const string_t* findvalue(const element_t* e, int id)
 {
     const property_t* p = e->property;
@@ -383,6 +805,77 @@ static const string_t* findvalue(const element_t* e, int id)
     }
 
     return NULL;
+}
+
+static inline int parse_double(const char** begin, const char* end, double* number)
+{
+    const char* ptr = *begin;
+    double integer, fraction;
+    int sign, expsign, exponent;
+
+    fraction = 0;
+    integer = 0;
+    exponent = 0;
+    sign = 1;
+    expsign = 1;
+
+    if(ptr < end && *ptr == '+')
+        ++ptr;
+    else if(ptr < end && *ptr == '-')
+    {
+        ++ptr;
+        sign = -1;
+    }
+
+    if(ptr >= end || (!IS_NUM(*ptr) && *ptr != '.'))
+        return 0;
+
+    if(*ptr != '.')
+    {
+        while(*ptr && IS_NUM(*ptr))
+            integer = 10.0 * integer + (*ptr++ - '0');
+    }
+
+    if(ptr < end && *ptr == '.')
+    {
+        ++ptr;
+        if(ptr >= end || !IS_NUM(*ptr))
+            return 0;
+        double div = 1.0;
+        while(ptr < end && IS_NUM(*ptr))
+        {
+            fraction = 10.0 * fraction + (*ptr++ - '0');
+            div *= 10.0;
+        }
+
+        fraction /= div;
+    }
+
+    if(ptr < end && (*ptr == 'e' || *ptr == 'E')
+       && (ptr[1] != 'x' && ptr[1] != 'm'))
+    {
+        ++ptr;
+        if(ptr < end && *ptr == '+')
+            ++ptr;
+        else if(ptr < end && *ptr == '-')
+        {
+            ++ptr;
+            expsign = -1;
+        }
+
+        if(ptr >= end || !IS_NUM(*ptr))
+            return 0;
+
+        while(ptr < end && IS_NUM(*ptr))
+            exponent = 10 * exponent + (*ptr++ - '0');
+    }
+
+    *begin = ptr;
+    *number = sign * (integer + fraction);
+    if(exponent)
+        *number *= pow(10.0, expsign*exponent);
+
+    return *number >= -DBL_MAX && *number <= DBL_MAX;
 }
 
 static int parse_number(const element_t* e, int id, double* number, int percent)
@@ -1060,7 +1553,7 @@ static void path_arc_to(plutovg_path_t* path, double current_x, double current_y
         th_arc -= 2.0 * PI;
 
     n_segs = (int)(ceil(fabs(th_arc / (PI * 0.5 + 0.001))));
-    for(i = 0; i < n_segs; i++)
+    for(i = 0;i < n_segs; i++)
         path_arc_segment(path, xc, yc, th0 + i * th_arc / n_segs, th0 + (i + 1) * th_arc / n_segs, rx, ry, x_axis_rotation);
 }
 
@@ -1608,496 +2101,74 @@ static int parse_text_anchor(const element_t* e, int id, int* anchor)
     return 1;
 }
 
-#define CHUNK_SIZE 4096
-typedef struct _heap_chunk {
-    struct _heap_chunk* next;
-} heap_chunk_t;
-
 typedef struct {
-    heap_chunk_t* chunk;
-    size_t size;
-} heap_t;
+    paint_t fill;
+    paint_t stroke;
 
-static heap_t* heap_create(void)
+    length_t linewidth;
+    length_t fontsize;
+
+    double fillopacity;
+    double strokeopacity;
+    double opacity;
+    double miterlimit;
+
+    plutovg_line_cap_t linecap;
+    plutovg_line_join_t linejoin;
+    plutovg_fill_rule_t fillrule;
+
+    int textanchor;
+    int visibility;
+} style_t;
+
+static void style_init(style_t* style)
 {
-    heap_t* heap = malloc(sizeof(heap_t));
-    heap->chunk = NULL;
-    heap->size = 0;
-    return heap;
+    style->fill.type = paint_type_color;
+    style->stroke.type = paint_type_none;
+
+    style->fill.color.r = 0;
+    style->fill.color.g = 0;
+    style->fill.color.b = 0;
+    style->fill.color.a = 1;
+
+    style->linewidth.value = 1.0;
+    style->linewidth.units = length_unit_px;
+
+    style->fontsize.value = 12.0;
+    style->fontsize.units = length_unit_px;
+
+    style->opacity = 1.0;
+    style->fillopacity = 1.0;
+    style->strokeopacity = 1.0;
+    style->miterlimit = 4.0;
+
+    style->linecap = plutovg_line_cap_butt;
+    style->linejoin = plutovg_line_join_miter;
+    style->fillrule = plutovg_fill_rule_non_zero;
+
+    style->textanchor = text_anchor_start;
+    style->visibility = visibility_visible;
 }
 
-static void* heap_alloc(heap_t* heap, size_t size)
+static void parse_style(const element_t* e, style_t* style)
 {
-    size = (size + 7ul) & ~7ul;
-    if(heap->chunk == NULL || heap->size + size > CHUNK_SIZE)
-    {
-        heap_chunk_t* chunk = malloc(sizeof(heap_chunk_t) + CHUNK_SIZE);
-        chunk->next = heap->chunk;
-        heap->chunk = chunk;
-        heap->size = 0;
-    }
-
-    void* data = (char*)(heap->chunk) + sizeof(heap_chunk_t) + heap->size;
-    heap->size += size;
-    return data;
-}
-
-static void heap_destroy(heap_t* heap)
-{
-    heap_chunk_t* chunk = heap->chunk;
-    while(chunk)
-    {
-        heap_chunk_t* n = chunk->next;
-        free(chunk);
-        chunk = n;
-    }
-
-    free(heap);
-}
-
-typedef struct hashmap_entry {
-    int hash;
-    string_t key;
-    void* value;
-    struct hashmap_entry* next;
-} hashmap_entry_t;
-
-typedef struct {
-    hashmap_entry_t** buckets;
-    int size;
-    int capacity;
-} hashmap_t;
-
-static hashmap_t* hashmap_create(void)
-{
-    hashmap_t* map = malloc(sizeof(hashmap_t));
-    map->buckets = calloc(16, sizeof(hashmap_entry_t*));
-    map->size = 0;
-    map->capacity = 16;
-    return map;
-}
-
-static int hashmap_hash(const char* ptr, const char* end)
-{
-    int size = (int)(end - ptr);
-    int h = size;
-    for(int i = 0;i < size;i++)
-    {
-        h = h * 31 + *ptr;
-        ++ptr;
-    }
-
-    return h;
-}
-
-static int hashmap_eq(const hashmap_entry_t* entry, const char* a, const char* a_end)
-{
-    const string_t* key = &entry->key;
-    const char* b = key->start;
-    const char* b_end = key->end;
-
-    int a_size = (int)(a_end - a);
-    int b_size = (int)(b_end - b);
-    if(a_size != b_size)
-        return 0;
-
-    for(int i = 0;i < a_size;i++)
-    {
-        if(a[i] != b[i])
-            return 0;
-    }
-
-    return 1;
-}
-
-static void hashmap_expand(hashmap_t* map)
-{
-    if(map->size > (map->capacity * 3 / 4))
-    {
-        int newcapacity = map->capacity << 1;
-        hashmap_entry_t** newbuckets = calloc((size_t)newcapacity, sizeof(hashmap_entry_t*));
-
-        for(int i = 0;i < map->capacity;i++)
-        {
-            hashmap_entry_t* entry = map->buckets[i];
-            while(entry != NULL)
-            {
-                hashmap_entry_t* next = entry->next;
-                size_t index = (size_t)(entry->hash) & (size_t)(newcapacity - 1);
-                entry->next = newbuckets[index];
-                newbuckets[index] = entry;
-                entry = next;
-            }
-        }
-
-        free(map->buckets);
-        map->buckets = newbuckets;
-        map->capacity = newcapacity;
-    }
-}
-
-static void hashmap_put(hashmap_t* map, heap_t* heap, const char* ptr, const char* end, void* value)
-{
-    int hash = hashmap_hash(ptr, end);
-    size_t index = (size_t)(hash) & (size_t)(map->capacity - 1);
-
-    hashmap_entry_t** p = &map->buckets[index];
-    while(1)
-    {
-        hashmap_entry_t* current = *p;
-        if(current == NULL)
-        {
-            hashmap_entry_t* entry = heap_alloc(heap, sizeof(hashmap_entry_t));
-            string_init(entry->key, ptr, end);
-            entry->hash = hash;
-            entry->value = value;
-            entry->next = NULL;
-            *p = entry;
-            map->size += 1;
-            hashmap_expand(map);
-            break;
-        }
-
-        if(current->hash==hash && hashmap_eq(current, ptr, end))
-        {
-            current->value = value;
-            break;
-        }
-
-        p = &current->next;
-    }
-}
-
-static void* hashmap_get(hashmap_t* map, const char* ptr, const char* end)
-{
-    int hash = hashmap_hash(ptr, end);
-    size_t index = (size_t)(hash) & (size_t)(map->capacity - 1);
-
-    hashmap_entry_t* entry = map->buckets[index];
-    while(entry != NULL)
-    {
-        if(entry->hash==hash && hashmap_eq(entry, ptr, end))
-            return entry->value;
-        entry = entry->next;
-    }
-
-    return NULL;
-}
-
-static void hashmap_destroy(hashmap_t* map)
-{
-    free(map->buckets);
-    free(map);
-}
-
-typedef struct {
-    element_t* root;
-    hashmap_t* cache;
-    heap_t* heap;
-} document_t;
-
-#define IS_CSS_STARTNAMECHAR(c) (IS_ALPHA(c) || c == '_')
-#define IS_CSS_NAMECHAR(c) (IS_CSS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-')
-static void parse_property(element_t* element, heap_t* heap, int id, const char* ptr, const char* end)
-{
-    if(id < MAX_STYLE && string_eq(ptr, end, "inherit"))
-        return;
-
-    if(id == ID_STYLE)
-    {
-        while(ptr < end && IS_CSS_STARTNAMECHAR(*ptr))
-        {
-            const char* start = ptr;
-            ++ptr;
-            while(ptr < end && IS_CSS_NAMECHAR(*ptr))
-                ++ptr;
-            int id = csspropertyid(start, ptr);
-            skip_ws(&ptr, end);
-            if(ptr >= end || *ptr!=':')
-                return;
-            ++ptr;
-            skip_ws(&ptr, end);
-            start = ptr;
-            while(ptr < end && *ptr!=';')
-                ++ptr;
-            parse_property(element, heap, id, start, ptr);
-            skip_ws_delimiter(&ptr, end, ';');
-        }
-    }
-
-    if(ptr >= end)
-        return;
-
-    property_t* property = heap_alloc(heap, sizeof(property_t));
-    property->id = id;
-    string_init(property->value, ptr, end);
-    property->next = element->property;
-    element->property = property;
-}
-
-#define IS_STARTNAMECHAR(c) (IS_ALPHA(c) ||  c == '_' || c == ':')
-#define IS_NAMECHAR(c) (IS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-' || c == '.')
-static int parse_attributes(const char** begin, const char* end, element_t* element, hashmap_t* cache, heap_t* heap)
-{
-    const char* ptr = *begin;
-    while(ptr < end && IS_STARTNAMECHAR(*ptr))
-    {
-        const char* start = ptr;
-        ++ptr;
-        while(ptr < end && IS_NAMECHAR(*ptr))
-            ++ptr;
-
-        int id = dompropertyid(start, ptr);
-        skip_ws(&ptr, end);
-        if(ptr >= end || *ptr!='=')
-            return 0;
-        ++ptr;
-
-        skip_ws(&ptr, end);
-        if(ptr >= end || (*ptr!='"' && *ptr!='\''))
-            return 0;
-
-        const char quote = *ptr;
-        ++ptr;
-        skip_ws(&ptr, end);
-        start = ptr;
-        while(ptr < end && *ptr!=quote)
-            ++ptr;
-        if(ptr >= end || *ptr!=quote)
-            return 0;
-        if(id && element)
-        {
-            if(id == ID_ID)
-                hashmap_put(cache, heap, start, ptr, element);
-            else
-                parse_property(element, heap, id, start, ptr);
-        }
-
-        ++ptr;
-        skip_ws(&ptr, end);
-    }
-
-    *begin = ptr;
-    return 1;
-}
-
-static document_t* parse_document(const char* data, int size)
-{
-    const char* ptr = data;
-    const char* end = ptr + size;
-
-    heap_t* heap = heap_create();
-    hashmap_t* cache = hashmap_create();
-    element_t* root = NULL;
-    element_t* current = NULL;
-    int ignore = 0;
-    while(ptr < end)
-    {
-        while(ptr < end && *ptr != '<')
-            ++ptr;
-
-        if(ptr >= end || *ptr != '<')
-            break;
-
-        ++ptr;
-        if(ptr < end && *ptr == '/')
-        {
-            ++ptr;
-            if(ptr >= end || !IS_STARTNAMECHAR(*ptr))
-                break;
-
-            ++ptr;
-            while(ptr < end && IS_NAMECHAR(*ptr))
-                ++ptr;
-
-            skip_ws(&ptr, end);
-            if(ptr >= end || *ptr != '>')
-                break;
-
-            if(ignore > 0)
-                ignore--;
-            else if(current && current->parent)
-                current = current->parent;
-
-            ++ptr;
-            continue;
-        }
-
-        if(ptr < end && *ptr == '?')
-        {
-            ++ptr;
-            if(!skip_string(&ptr, end, "xml"))
-                break;
-
-            skip_ws(&ptr, end);
-            if(!parse_attributes(&ptr, end, NULL, NULL, NULL))
-                break;
-
-            if(!skip_string(&ptr, end, "?>"))
-                break;
-
-            skip_ws(&ptr, end);
-            continue;
-        }
-
-        if(ptr < end && *ptr == '!')
-        {
-            ++ptr;
-            if(skip_string(&ptr, end, "--"))
-            {
-                const char* sub = strstr(ptr, "-->");
-                if(sub >= end || sub == NULL)
-                    break;
-
-                ptr += (sub - ptr) + 3;
-                skip_ws(&ptr, end);
-                continue;
-            }
-
-            if(skip_string(&ptr, end, "[CDATA["))
-            {
-                const char* sub = strstr(ptr, "]]>");
-                if(sub >= end || sub == NULL)
-                    break;
-
-                ptr += (sub - ptr) + 3;
-                skip_ws(&ptr, end);
-                continue;
-            }
-
-            if(skip_string(&ptr, end, "DOCTYPE"))
-            {
-                while(ptr < end && *ptr != '>')
-                {
-                    if(*ptr=='[')
-                    {
-                        ++ptr;
-                        int depth = 1;
-                        while(ptr < end && depth > 0)
-                        {
-                            if(*ptr=='[') ++depth;
-                            else if(*ptr==']') --depth;
-                            ++ptr;
-                        }
-                    }
-                    else
-                    {
-                        ++ptr;
-                    }
-                }
-
-                if(ptr >= end || *ptr != '>')
-                    break;
-
-                ptr += 1;
-                skip_ws(&ptr, end);
-                continue;
-            }
-
-            break;
-        }
-
-        if(ptr >= end || !IS_STARTNAMECHAR(*ptr))
-            break;
-
-        const char* start = ptr;
-        ++ptr;
-        while(ptr < end && IS_NAMECHAR(*ptr))
-            ++ptr;
-
-        element_t* element = NULL;
-        if(ignore > 0)
-        {
-            ignore++;
-        }
-        else
-        {
-            int id = domelementid(start, ptr);
-            if(id == TAG_UNKNOWN)
-            {
-                ignore = 1;
-            }
-            else
-            {
-                if(root && current == NULL)
-                    break;
-                element = heap_alloc(heap, sizeof(element_t));
-                element->id = id;
-                element->parent = NULL;
-                element->next = NULL;
-                element->first = NULL;
-                element->last = NULL;
-                element->property = NULL;
-                if(root == NULL)
-                {
-                    if(element->id != TAG_SVG)
-                        break;
-                    root = element;
-                }
-                else
-                {
-                    element->parent = current;
-                    if(current->last)
-                    {
-                        current->last->next = element;
-                        current->last = element;
-                    }
-                    else
-                    {
-                        current->last = element;
-                        current->first = element;
-                    }
-                }
-            }
-        }
-
-        skip_ws(&ptr, end);
-        if(!parse_attributes(&ptr, end, element, cache, heap))
-            break;
-
-        if(ptr < end && *ptr == '>')
-        {
-            if(element)
-                current = element;
-            ++ptr;
-            continue;
-        }
-
-        if(ptr < end && *ptr == '/')
-        {
-            ++ptr;
-            if(ptr >= end || *ptr != '>')
-                break;
-
-            if(ignore > 0)
-                ignore--;
-            ++ptr;
-            continue;
-        }
-
-        break;
-    }
-
-    skip_ws(&ptr, end);
-    if(root == NULL || ptr != end || ignore != 0)
-    {
-        hashmap_destroy(cache);
-        heap_destroy(heap);
-        return NULL;
-    }
-
-    document_t* document = malloc(sizeof(document_t));
-    document->root = root;
-    document->cache = cache;
-    document->heap = heap;
-    return document;
-}
-
-static void document_destroy(document_t* document)
-{
-    hashmap_destroy(document->cache);
-    heap_destroy(document->heap);
-    free(document);
+    parse_paint(e, ID_FILL, &style->fill);
+    parse_paint(e, ID_STROKE, &style->stroke);
+
+    parse_length(e, ID_STROKE_WIDTH, &style->linewidth, 0);
+    parse_length(e, ID_FONT_SIZE, &style->fontsize, 0);
+
+    parse_number(e, ID_OPACITY, &style->opacity, 1);
+    parse_number(e, ID_FILL_OPACITY, &style->fillopacity, 1);
+    parse_number(e, ID_STROKE_OPACITY, &style->strokeopacity, 1);
+    parse_number(e, ID_STROKE_MITERLIMIT, &style->miterlimit, 0);
+
+    parse_line_cap(e, ID_STROKE_LINECAP, &style->linecap);
+    parse_line_join(e, ID_STROKE_LINEJOIN, &style->linejoin);
+    parse_fill_rule(e, ID_FILL_RULE, &style->fillrule);
+
+    parse_text_anchor(e, ID_TEXT_ANCHOR, &style->textanchor);
+    parse_visibility(e, ID_VISIBILITY, &style->visibility);
 }
 
 typedef struct {
@@ -2165,69 +2236,6 @@ static void canvas_blend(canvas_t* canvas, const canvas_t* source, plutovg_opera
     plutovg_paint(canvas->pluto);
 }
 
-typedef struct {
-    paint_t fill;
-    paint_t stroke;
-    length_t linewidth;
-
-    double fillopacity;
-    double strokeopacity;
-    double opacity;
-    double miterlimit;
-
-    plutovg_line_cap_t linecap;
-    plutovg_line_join_t linejoin;
-    plutovg_fill_rule_t fillrule;
-
-    int textanchor;
-    int visibility;
-} style_t;
-
-static void style_init(style_t* style)
-{
-    paint_t* fill = &style->fill;
-    paint_t* stroke = &style->stroke;
-
-    fill->type = paint_type_color;
-    stroke->type = paint_type_none;
-
-    plutovg_color_init_rgb(&fill->color, 0, 0, 0);
-
-    style->linewidth.value = 1.0;
-    style->linewidth.units = length_unit_px;
-
-    style->opacity = 1.0;
-    style->fillopacity = 1.0;
-    style->strokeopacity = 1.0;
-    style->miterlimit = 4.0;
-
-    style->linecap = plutovg_line_cap_butt;
-    style->linejoin = plutovg_line_join_miter;
-    style->fillrule = plutovg_fill_rule_non_zero;
-
-    style->textanchor = text_anchor_start;
-    style->visibility = visibility_visible;
-}
-
-static void parse_style(const element_t* e, style_t* style)
-{
-    parse_paint(e, ID_FILL, &style->fill);
-    parse_paint(e, ID_STROKE, &style->stroke);
-    parse_length(e, ID_STROKE_WIDTH, &style->linewidth, 0);
-
-    parse_number(e, ID_OPACITY, &style->opacity, 1);
-    parse_number(e, ID_FILL_OPACITY, &style->fillopacity, 1);
-    parse_number(e, ID_STROKE_OPACITY, &style->strokeopacity, 1);
-    parse_number(e, ID_STROKE_MITERLIMIT, &style->miterlimit, 0);
-
-    parse_line_cap(e, ID_STROKE_LINECAP, &style->linecap);
-    parse_line_join(e, ID_STROKE_LINEJOIN, &style->linejoin);
-    parse_fill_rule(e, ID_FILL_RULE, &style->fillrule);
-
-    parse_text_anchor(e, ID_TEXT_ANCHOR, &style->textanchor);
-    parse_visibility(e, ID_VISIBILITY, &style->visibility);
-}
-
 typedef struct render_state {
     canvas_t* canvas;
     style_t style;
@@ -2271,20 +2279,20 @@ static void render_state_destroy(render_state_t* state)
 }
 
 typedef struct {
+    document_t* document;
     render_state_t* state;
     plutovg_path_t* path;
-    const document_t* document;
-    const plutovg_font_t* font;
+    plutovg_font_t* font;
     double dpi;
 } render_context_t;
 
-static render_context_t* render_context_create(const document_t* document, const plutovg_font_t* font, double dpi)
+static render_context_t* render_context_create(document_t* document, plutovg_font_t* font, double dpi)
 {
     render_context_t* context = malloc(sizeof(render_context_t));
+    context->document = document;
     context->state = render_state_create();
     context->path = plutovg_path_create();
-    context->document = document;
-    context->font = font;
+    context->font = plutovg_font_reference(font);
     context->dpi = dpi;
     return context;
 }
@@ -2293,6 +2301,7 @@ static void render_context_destroy(render_context_t* context)
 {
     render_state_destroy(context->state);
     plutovg_path_destroy(context->path);
+    plutovg_font_destroy(context->font);
     free(context);
 }
 
@@ -2671,7 +2680,7 @@ static plutovg_paint_t* resolve_paint(const render_context_t* context, const pai
     return NULL;
 }
 
-static void draw_path(render_context_t* context, const plutovg_path_t* path)
+static void render_context_draw(render_context_t* context)
 {
     render_state_t* state = context->state;
     style_t* style = &state->style;
@@ -2680,7 +2689,7 @@ static void draw_path(render_context_t* context, const plutovg_path_t* path)
 
     plutovg_t* pluto = state->canvas->pluto;
     plutovg_new_path(pluto);
-    plutovg_add_path(pluto, path);
+    plutovg_add_path(pluto, context->path);
     plutovg_set_matrix(pluto, &state->matrix);
 
     plutovg_paint_t* fill = resolve_paint(context, &style->fill);
@@ -2727,7 +2736,6 @@ static void render_symbol(render_context_t* context, const element_t* e, double 
     render_context_push(context, e);
 
     render_state_t* state = context->state;
-
     state->viewport.x = x;
     state->viewport.y = y;
     state->viewport.w = w;
@@ -2808,14 +2816,12 @@ static void render_use(render_context_t* context, const element_t* e)
 
     render_context_push(context, e);
 
-    render_state_t* state = context->state;
-
     double _x = resolve_length(context, &x, 'x');
     double _y = resolve_length(context, &y, 'y');
     double _w = resolve_length(context, &w, 'x');
     double _h = resolve_length(context, &h, 'y');
 
-    plutovg_matrix_translate(&state->matrix, _x, _y);
+    plutovg_matrix_translate(&context->state->matrix, _x, _y);
 
     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL)
         render_symbol(context, ref, 0, 0, _w, _h);
@@ -2857,19 +2863,17 @@ static void render_line(render_context_t* context, const element_t* e)
 
     render_context_push(context, e);
 
-    plutovg_path_t* path = context->path;
     render_state_t* state = context->state;
-
     state->bbox.x = MIN(_x1, _x2);
     state->bbox.y = MIN(_y1, _y2);
     state->bbox.w = fabs(_x2 - _x1);
     state->bbox.h = fabs(_y2 - _y1);
 
+    plutovg_path_t* path = context->path;
     plutovg_path_clear(path);
     plutovg_path_move_to(path, _x1, _y1);
     plutovg_path_line_to(path, _x2, _y2);
-
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -2888,7 +2892,7 @@ static void render_polyline(render_context_t* context, const element_t* e)
 
     render_state_t* state = context->state;
     path_bounding_box(path, &state->bbox);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -2907,7 +2911,7 @@ static void render_polygon(render_context_t* context, const element_t* e)
 
     render_state_t* state = context->state;
     path_bounding_box(path, &state->bbox);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -2926,7 +2930,7 @@ static void render_path(render_context_t* context, const element_t* e)
 
     render_state_t* state = context->state;
     path_bounding_box(path, &state->bbox);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -2958,17 +2962,16 @@ static void render_ellipse(render_context_t* context, const element_t* e)
 
     render_context_push(context, e);
 
-    plutovg_path_t* path = context->path;
     render_state_t* state = context->state;
-
     state->bbox.x = _cx - _rx;
     state->bbox.y = _cy - _ry;
     state->bbox.w = _rx + _rx;
     state->bbox.h = _ry + _ry;
 
+    plutovg_path_t* path = context->path;
     plutovg_path_clear(path);
     plutovg_path_add_ellipse(path, _cx, _cy, _rx, _ry);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -2995,17 +2998,16 @@ static void render_circle(render_context_t* context, const element_t* e)
 
     render_context_push(context, e);
 
-    plutovg_path_t* path = context->path;
     render_state_t* state = context->state;
-
     state->bbox.x = _cx - _r;
     state->bbox.y = _cy - _r;
     state->bbox.w = _r + _r;
     state->bbox.h = _r + _r;
 
+    plutovg_path_t* path = context->path;
     plutovg_path_clear(path);
     plutovg_path_add_circle(path, _cx, _cy, _r);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -3049,17 +3051,16 @@ static void render_rect(render_context_t* context, const element_t* e)
 
     render_context_push(context, e);
 
-    plutovg_path_t* path = context->path;
     render_state_t* state = context->state;
-
     state->bbox.x = _x;
     state->bbox.y = _y;
     state->bbox.w = _w;
     state->bbox.h = _h;
 
+    plutovg_path_t* path = context->path;
     plutovg_path_clear(path);
     plutovg_path_add_round_rect(path, _x, _y, _w, _h, _rx, _ry);
-    draw_path(context, path);
+    render_context_draw(context);
 
     render_context_pop(context, e);
 }
@@ -3110,7 +3111,7 @@ static void render_children(render_context_t* context, const element_t* e)
     }
 }
 
-static void document_dimensions(const document_t* document, const plutovg_font_t* font, double* width, double* height, double dpi)
+static void document_dimensions(document_t* document, plutovg_font_t* font, double* width, double* height, double dpi)
 {
     length_t w = {0, length_unit_percent};
     length_t h = {0, length_unit_percent};
@@ -3145,7 +3146,7 @@ static void document_dimensions(const document_t* document, const plutovg_font_t
     }
 }
 
-plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const plutovg_font_t* font, int width, int height, double dpi)
+plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, plutovg_font_t* font, int width, int height, double dpi)
 {
     document_t* document = parse_document(data, size);
     if(document == NULL)
@@ -3187,7 +3188,7 @@ plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const p
     return surface;
 }
 
-plutovg_surface_t* plutosvg_load_from_file(const char* filename, const plutovg_font_t* font, int width, int height, double dpi)
+plutovg_surface_t* plutosvg_load_from_file(const char* filename, plutovg_font_t* font, int width, int height, double dpi)
 {
     FILE* fp = fopen(filename, "r");
     if(fp == NULL)
@@ -3206,7 +3207,7 @@ plutovg_surface_t* plutosvg_load_from_file(const char* filename, const plutovg_f
     return surface;
 }
 
-int plutosvg_dimensions_from_memory(const char* data, int size, const plutovg_font_t* font, int* width, int* height, double dpi)
+int plutosvg_dimensions_from_memory(const char* data, int size, plutovg_font_t* font, int* width, int* height, double dpi)
 {
     document_t* document = parse_document(data, size);
     if(document == NULL)
@@ -3217,11 +3218,11 @@ int plutosvg_dimensions_from_memory(const char* data, int size, const plutovg_fo
     document_destroy(document);
 
     if(width) *width = (int)(ceil(w));
-    if(height) *height = (int)(ceil(w));
+    if(height) *height = (int)(ceil(h));
     return 1;
 }
 
-int plutosvg_dimensions_from_file(const char* filename, const plutovg_font_t* font, int* width, int* height, double dpi)
+int plutosvg_dimensions_from_file(const char* filename, plutovg_font_t* font, int* width, int* height, double dpi)
 {
     FILE* fp = fopen(filename, "r");
     if(fp == NULL)

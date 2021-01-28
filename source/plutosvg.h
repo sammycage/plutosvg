@@ -17,7 +17,7 @@ extern "C" {
  * @param dpi - dots per inch to use for units conversion to pixels
  * @return pointer to surface object on success, otherwise NULL
  */
-plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const plutovg_font_t* font, int width, int height, double dpi);
+plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, plutovg_font_t* font, int width, int height, double dpi);
 
 /**
  * @brief Load the image from a file on disk
@@ -28,7 +28,7 @@ plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, const p
  * @param dpi - dots per inch to use for units conversion to pixels
  * @return pointer to surface object on success, otherwise NULL
  */
-plutovg_surface_t* plutosvg_load_from_file(const char* filename, const plutovg_font_t* font, int width, int height, double dpi);
+plutovg_surface_t* plutosvg_load_from_file(const char* filename, plutovg_font_t* font, int width, int height, double dpi);
 
 /**
  * @brief Get image dimensions from a file in memory
@@ -40,7 +40,7 @@ plutovg_surface_t* plutosvg_load_from_file(const char* filename, const plutovg_f
  * @param dpi - dots per inch to use for units conversion to pixels
  * @return true on success, otherwise false
  */
-int plutosvg_dimensions_from_memory(const char* data, int size, const plutovg_font_t* font, int* width, int* height, double dpi);
+int plutosvg_dimensions_from_memory(const char* data, int size, plutovg_font_t* font, int* width, int* height, double dpi);
 
 /**
  * @brief Get image dimensions from a file on disk
@@ -51,7 +51,7 @@ int plutosvg_dimensions_from_memory(const char* data, int size, const plutovg_fo
  * @param dpi - dots per inch to use for units conversion to pixels
  * @return true on success, otherwise false
  */
-int plutosvg_dimensions_from_file(const char* filename, const plutovg_font_t* font, int* width, int* height, double dpi);
+int plutosvg_dimensions_from_file(const char* filename, plutovg_font_t* font, int* width, int* height, double dpi);
 
 #ifdef __cplusplus
 }
