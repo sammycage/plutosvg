@@ -5,7 +5,8 @@ plutosvg is a tiny SVG rendering library in C
 - Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
 - Paint Servers : solidColor, linearGradient, radialGradient, pattern(TODO)
 - Document Structures: defs, svg, g, use, symbol
-- Texts (TODO) : text, tspan
+- Texts (TODO) : text, tspan, tref
+- Image (TODO)
 
 ## Example
 ```c
@@ -47,4 +48,4 @@ make
 ```
 
 ## Support
-If you like what we do, [you can buy us a coffee](https://www.patreon.com/sammycage)
+If you like what we do, [you can buy us a coffee](https://www.buymeacoffee.com/sammycage)
