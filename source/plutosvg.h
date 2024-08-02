@@ -3,55 +3,123 @@
 
 #include <plutovg.h>
 
+#if !defined(PLUTOSVG_BUILD_STATIC) && (defined(_WIN32) || defined(__CYGWIN__))
+#define PLUTOSVG_EXPORT __declspec(dllexport)
+#define PLUTOSVG_IMPORT __declspec(dllimport)
+#elif defined(__GNUC__) && (__GNUC__ >= 4)
+#define PLUTOSVG_EXPORT __attribute__((__visibility__("default")))
+#define PLUTOSVG_IMPORT
+#else
+#define PLUTOSVG_EXPORT
+#define PLUTOSVG_IMPORT
+#endif
+
+#ifdef PLUTOSVG_BUILD
+#define PLUTOSVG_API PLUTOSVG_EXPORT
+#else
+#define PLUTOSVG_API PLUTOSVG_IMPORT
+#endif
+
+#define PLUTOSVG_VERSION_MAJOR 0
+#define PLUTOSVG_VERSION_MINOR 0
+#define PLUTOSVG_VERSION_MICRO 1
+
+#define PLUTOSVG_VERSION PLUTOVG_VERSION_ENCODE(PLUTOSVG_VERSION_MAJOR, PLUTOSVG_VERSION_MINOR, PLUTOSVG_VERSION_MICRO)
+#define PLUTOSVG_VERSION_STRING PLUTOVG_VERSION_STRINGIZE(PLUTOSVG_VERSION_MAJOR, PLUTOSVG_VERSION_MINOR, PLUTOSVG_VERSION_MICRO)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief Load the image from a file in memory
- * @param data - pointer to the file data in memory
- * @param size - size of the data to load, in bytes
- * @param font - font to use for text rendering
- * @param width - requested width, in pixels
- * @param height - requested height, in pixels
- * @param dpi - dots per inch to use for units conversion to pixels
- * @return pointer to surface object on success, otherwise NULL
+ * @brief plutosvg_version
+ * @return
  */
-plutovg_surface_t* plutosvg_load_from_memory(const char* data, int size, plutovg_font_t* font, int width, int height, double dpi);
+PLUTOSVG_API int plutosvg_version(void);
 
 /**
- * @brief Load the image from a file on disk
- * @param filename - path of the image file to load
- * @param font - font to use for text rendering
- * @param width - requested width, in pixels
- * @param height - requested height, in pixels
- * @param dpi - dots per inch to use for units conversion to pixels
- * @return pointer to surface object on success, otherwise NULL
+ * @brief plutosvg_version_string
+ * @return
  */
-plutovg_surface_t* plutosvg_load_from_file(const char* filename, plutovg_font_t* font, int width, int height, double dpi);
+PLUTOSVG_API const char* plutosvg_version_string(void);
 
 /**
- * @brief Get image dimensions from a file in memory
- * @param data - pointer to the file data in memory
- * @param size - size of the data to load, in bytes
- * @param font - font to use for text rendering
- * @param width - width of the image, in pixels
- * @param height - height of the image, in pixels
- * @param dpi - dots per inch to use for units conversion to pixels
- * @return true on success, otherwise false
+ * @brief plutosvg_document_t
  */
-int plutosvg_dimensions_from_memory(const char* data, int size, plutovg_font_t* font, int* width, int* height, double dpi);
+typedef struct plutosvg_document plutosvg_document_t;
 
 /**
- * @brief Get image dimensions from a file on disk
- * @param filename - path of the image file to load
- * @param font - font to use for text rendering
- * @param width - width of the image, in pixels
- * @param height - height of the image, in pixels
- * @param dpi - dots per inch to use for units conversion to pixels
- * @return true on success, otherwise false
+ * @brief plutosvg_palette_func_t
+ * @param closure
+ * @param name
+ * @param length
+ * @param color
+ * @return
  */
-int plutosvg_dimensions_from_file(const char* filename, plutovg_font_t* font, int* width, int* height, double dpi);
+typedef bool(*plutosvg_palette_func_t)(void* closure, const char* name, int length, plutovg_color_t* color);
+
+/**
+ * @brief plutosvg_document_load_from_data
+ * @param data
+ * @param length
+ * @param width
+ * @param height
+ * @param destroy_func
+ * @param closure
+ * @return
+ */
+PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int length, float width, float height, plutovg_destroy_func_t destroy_func, void* closure);
+
+/**
+ * @brief plutosvg_document_load_from_file
+ * @param filename
+ * @param width
+ * @param height
+ * @return
+ */
+PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_file(const char* filename, float width, float height);
+
+/**
+ * @brief plutosvg_document_render
+ * @param document
+ * @param id
+ * @param canvas
+ * @param current_color
+ * @param palette_func
+ * @param closure
+ * @return
+ */
+PLUTOSVG_API bool plutosvg_document_render(const plutosvg_document_t* document, const char* id, plutovg_canvas_t* canvas,
+    const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
+
+/**
+ * @brief plutosvg_document_render_to_surface
+ * @param document
+ * @param id
+ * @param width
+ * @param height
+ * @param current_color
+ * @param palette_func
+ * @param closure
+ * @return
+ */
+PLUTOSVG_API plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height,
+    const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
+
+/**
+ * @brief plutosvg_document_extents
+ * @param document
+ * @param id
+ * @param extents
+ * @return
+ */
+PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document, const char* id, plutovg_rect_t* extents);
+
+/**
+ * @brief plutosvg_document_destroy
+ * @param document
+ */
+PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 
 #ifdef __cplusplus
 }

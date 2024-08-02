@@ -3,49 +3,42 @@ plutosvg is a tiny SVG rendering library in C
 
 ## Features
 - Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
-- Paint Servers : solidColor, linearGradient, radialGradient, pattern(TODO)
+- Paint Servers : solidColor, linearGradient, radialGradient
 - Document Structures: defs, svg, g, use, symbol
-- Texts (TODO) : text, tspan, tref
 - Image (TODO)
 
-## Example
+## Basic Usage
 ```c
 #include <plutosvg.h>
 
-#include <stdlib.h>
 #include <stdio.h>
 
 int main(void)
 {
-    plutovg_surface_t* surface = plutosvg_load_from_file("camera.svg", NULL, 0, 0, 96.0);
-    if(surface == NULL)
-    {
-        printf("Load failed\n");
+    plutosvg_document_t* document = plutosvg_document_load_from_file("camera.svg", 150, 300);
+    if(document == NULL) {
+        printf("Unable to load: camera.svg\n");
         return -1;
     }
 
+    plutovg_surface_t* surface = plutosvg_document_render_to_surface(document, NULL, -1, -1, NULL, NULL, NULL);
     plutovg_surface_write_to_png(surface, "camera.png");
+    plutosvg_document_destroy(document);
     plutovg_surface_destroy(surface);
     return 0;
 }
-
 ```
-
-output :
 
 ![camera.png](camera.png)
 
-## Build
-Install [cmake](https://cmake.org/download/) if not already installed
+## Installation
 
-```
-git clone --recursive https://github.com/sammycage/plutosvg.git
-cd plutosvg
-mkdir build
-cd build
-cmake ..
-make
-```
+Ensure you have [Meson](http://mesonbuild.com) and [Ninja](http://ninja-build.org) installed.
 
-## Support
-If you like what we do, [you can buy us a coffee](https://www.buymeacoffee.com/sammycage)
+```bash
+git clone https://github.com/sammycage/plutosvg.git
+cd plutovg
+meson setup build
+ninja -C build
+ninja -C build install
+```
