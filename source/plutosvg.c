@@ -1716,11 +1716,8 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
         parse_length(document->root_element, ATTR_WIDTH, &w, false, false);
         parse_length(document->root_element, ATTR_HEIGHT, &h, false, false);
 
-        plutovg_rect_t view_box = {0, 0, width, height};
-        parse_view_box(document->root_element, ATTR_VIEW_BOX, &view_box);
-
-        document->width = convert_length(&w, view_box.w);
-        document->height = convert_length(&h, view_box.h);
+        document->width = convert_length(&w, width);
+        document->height = convert_length(&h, height);
         return document;
     }
 

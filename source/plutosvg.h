@@ -121,6 +121,12 @@ PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document,
  */
 PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 
+/**
+ * @brief plutosvg_ft_svg_hooks
+ * @return
+ */
+PLUTOSVG_API const void* plutosvg_ft_svg_hooks(void);
+
 #ifdef __cplusplus
 }
 #endif
