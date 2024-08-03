@@ -31,11 +31,7 @@ int main(int argc, char* argv[])
         goto cleanup;
     }
 
-    if(!plutovg_surface_write_to_png(surface, output)) {
-        printf("Unable to write PNG: %s \n", output);
-        goto cleanup;
-    }
-
+    plutovg_surface_write_to_png(surface, output);
     printf("Generated PNG: %s\n", output);
 cleanup:
     plutosvg_document_destroy(document);
