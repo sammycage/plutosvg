@@ -1067,7 +1067,7 @@ static bool parse_view_box(const element_t* element, int id, plutovg_rect_t* vie
         return false;
     }
 
-    if(w < 0.f || h < 0.f)
+    if(w <= 0.f || h <= 0.f)
         return false;
     view_box->x = x;
     view_box->y = y;
@@ -1718,24 +1718,27 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
         parse_length(document->root_element, ATTR_WIDTH, &w, false, false);
         parse_length(document->root_element, ATTR_HEIGHT, &h, false, false);
 
-        document->width = convert_length(&w, width);
-        document->height = convert_length(&h, height);
-        if(document->width <= 0.f || document->height <= 0.f) {
-            plutovg_rect_t view_box = {0, 0, 0, 0};
-            parse_view_box(document->root_element, ATTR_VIEW_BOX, &view_box);
-            if(view_box.w > 0.f && view_box.h > 0.f) {
-                float ratio = view_box.w / view_box.h;
-                if(document->width <= 0.f && document->height > 0.f) {
-                    document->width = document->height * ratio;
-                } else if(document->width > 0.f && document->height <= 0.f) {
-                    document->width = document->width * ratio;
+        float intrinsic_width = convert_length(&w, width);
+        float intrinsic_height = convert_length(&h, height);
+        if(intrinsic_width <= 0.f || intrinsic_height <= 0.f) {
+            plutovg_rect_t view_box = {0};
+            if(parse_view_box(document->root_element, ATTR_VIEW_BOX, &view_box)) {
+                float intrinsic_ratio = view_box.w / view_box.h;
+                if(intrinsic_width <= 0.f && intrinsic_height > 0.f) {
+                    intrinsic_width = intrinsic_height * intrinsic_ratio;
+                } else if(intrinsic_width > 0.f && intrinsic_height <= 0.f) {
+                    intrinsic_height = intrinsic_width / intrinsic_ratio;
                 } else {
-                    document->width = view_box.w;
-                    document->height = view_box.h;
+                    intrinsic_width = view_box.w;
+                    intrinsic_height = view_box.h;
                 }
             }
         }
 
+        if(intrinsic_width <= 0.f || intrinsic_height <= 0.f)
+            goto error;
+        document->width = intrinsic_width;
+        document->height = intrinsic_height;
         return document;
     }
 
@@ -2289,8 +2292,7 @@ static void render_children(const element_t* element, const render_context_t* co
 static void apply_view_transform(render_state_t* state, float width, float height)
 {
     plutovg_rect_t view_box = {0, 0, 0, 0};
-    parse_view_box(state->element, ATTR_VIEW_BOX, &view_box);
-    if(view_box.w <= 0.f || view_box.h <= 0.f)
+    if(!parse_view_box(state->element, ATTR_VIEW_BOX, &view_box))
         return;
     view_position_t position = {view_align_x_mid_y_mid, view_scale_meet};
     parse_view_position(state->element, ATTR_PRESERVE_ASPECT_RATIO, &position);
@@ -2757,18 +2759,18 @@ static void render_image(const element_t* element, const render_context_t* conte
     plutovg_rect_t src_rect = {0, 0, width, height};
     view_position_t position = {view_align_x_mid_y_mid, view_scale_meet};
 
-    parse_view_position(state->element, ATTR_PRESERVE_ASPECT_RATIO, &position);
+    parse_view_position(element, ATTR_PRESERVE_ASPECT_RATIO, &position);
     transform_view_rect(&position, &dst_rect, &src_rect);
 
     float scale_x = dst_rect.w / src_rect.w;
     float scale_y = dst_rect.h / src_rect.h;
     plutovg_matrix_t matrix = {scale_x, 0, 0, scale_y, -src_rect.x * scale_x, -src_rect.y * scale_y};
 
+    plutovg_canvas_set_fill_rule(context->canvas, PLUTOVG_FILL_RULE_NON_ZERO);
+    plutovg_canvas_set_opacity(context->canvas, new_state.opacity);
     plutovg_canvas_set_matrix(context->canvas, &new_state.matrix);
     plutovg_canvas_translate(context->canvas, dst_rect.x, dst_rect.y);
-    plutovg_canvas_set_fill_rule(context->canvas, PLUTOVG_FILL_RULE_NON_ZERO);
     plutovg_canvas_clip_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
-    plutovg_canvas_set_opacity(context->canvas, new_state.opacity);
     plutovg_canvas_set_texture(context->canvas, image, PLUTOVG_TEXTURE_TYPE_PLAIN, 1, &matrix);
     plutovg_canvas_paint(context->canvas);
     plutovg_surface_destroy(image);
