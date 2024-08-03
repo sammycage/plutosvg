@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     plutosvg_document_t* document = NULL;
     plutovg_surface_t* surface = NULL;
 
-    document = plutosvg_document_load_from_file(input, 150, 300);
+    document = plutosvg_document_load_from_file(input, -1, -1);
     if(document == NULL) {
         printf("Unable to load: %s\n", input);
         goto cleanup;

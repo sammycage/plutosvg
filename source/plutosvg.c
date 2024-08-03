@@ -25,6 +25,7 @@ enum {
     TAG_DEFS,
     TAG_ELLIPSE,
     TAG_G,
+    TAG_IMAGE,
     TAG_LINE,
     TAG_LINEAR_GRADIENT,
     TAG_PATH,
@@ -125,6 +126,7 @@ static int elementid(const char* data, size_t length)
         {"defs", TAG_DEFS},
         {"ellipse", TAG_ELLIPSE},
         {"g", TAG_G},
+        {"image", TAG_IMAGE},
         {"line", TAG_LINE},
         {"linearGradient", TAG_LINEAR_GRADIENT},
         {"path", TAG_PATH},
@@ -1718,6 +1720,22 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
 
         document->width = convert_length(&w, width);
         document->height = convert_length(&h, height);
+        if(document->width <= 0.f || document->height <= 0.f) {
+            plutovg_rect_t view_box = {0, 0, 0, 0};
+            parse_view_box(document->root_element, ATTR_VIEW_BOX, &view_box);
+            if(view_box.w > 0.f && view_box.h > 0.f) {
+                float ratio = view_box.w / view_box.h;
+                if(document->width <= 0.f && document->height > 0.f) {
+                    document->width = document->height * ratio;
+                } else if(document->width > 0.f && document->height <= 0.f) {
+                    document->width = document->width * ratio;
+                } else {
+                    document->width = view_box.w;
+                    document->height = view_box.h;
+                }
+            }
+        }
+
         return document;
     }
 
@@ -2595,6 +2613,169 @@ static void render_path(const element_t* element, const render_context_t* contex
     render_state_end(&new_state);
 }
 
+static void transform_view_rect(const view_position_t* position, plutovg_rect_t* dst_rect, plutovg_rect_t* src_rect)
+{
+    if(position->align == view_align_none)
+        return;
+    float view_width = dst_rect->w;
+    float view_height = dst_rect->h;
+    float image_width = src_rect->w;
+    float image_height = src_rect->h;
+    if(position->scale == view_scale_meet) {
+        float scale = image_height / image_width;
+        if(view_height > view_width * scale) {
+            dst_rect->h = view_width * scale;
+            switch(position->align) {
+            case view_align_x_min_y_mid:
+            case view_align_x_mid_y_mid:
+            case view_align_x_max_y_mid:
+                dst_rect->y += (view_height - dst_rect->h) * 0.5f;
+                break;
+            case view_align_x_min_y_max:
+            case view_align_x_mid_y_max:
+            case view_align_x_max_y_max:
+                dst_rect->y += view_height - dst_rect->h;
+                break;
+            default:
+                break;
+            }
+        }
+
+        if(view_width > view_height / scale) {
+            dst_rect->w = view_height / scale;
+            switch(position->align) {
+            case view_align_x_mid_y_min:
+            case view_align_x_mid_y_mid:
+            case view_align_x_mid_y_max:
+                dst_rect->x += (view_width - dst_rect->w) * 0.5f;
+                break;
+            case view_align_x_max_y_min:
+            case view_align_x_max_y_mid:
+            case view_align_x_max_y_max:
+                dst_rect->x += view_width - dst_rect->w;
+                break;
+            default:
+                break;
+            }
+        }
+    } else if(position->scale == view_scale_slice) {
+        float scale = image_height / image_width;
+        if(view_height < view_width * scale) {
+            src_rect->h = view_height * (image_width / view_width);
+            switch(position->align) {
+            case view_align_x_min_y_mid:
+            case view_align_x_mid_y_mid:
+            case view_align_x_max_y_mid:
+                src_rect->y += (image_height - src_rect->h) * 0.5f;
+                break;
+            case view_align_x_min_y_max:
+            case view_align_x_mid_y_max:
+            case view_align_x_max_y_max:
+                src_rect->y += image_height - src_rect->h;
+                break;
+            default:
+                break;
+            }
+        }
+
+        if(view_width < view_height / scale) {
+            src_rect->w = view_width * (image_height / view_height);
+            switch(position->align) {
+            case view_align_x_mid_y_min:
+            case view_align_x_mid_y_mid:
+            case view_align_x_mid_y_max:
+                src_rect->x += (image_width - src_rect->w) * 0.5f;
+                break;
+            case view_align_x_max_y_min:
+            case view_align_x_max_y_mid:
+            case view_align_x_max_y_max:
+                src_rect->x += image_width - src_rect->w;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+static plutovg_surface_t* load_image(const element_t* element)
+{
+    const string_t* value = find_attribute(element, ATTR_XLINK_HREF, false);
+    if(value == NULL)
+        return false;
+    const char* it = value->data;
+    const char* end = it + value->length;
+    if(!skip_string(&it, end, "data:image/png")
+        && !skip_string(&it, end, "data:image/jpg")
+        && !skip_string(&it, end, "data:image/jpeg")) {
+        return NULL;
+    }
+
+    if(skip_string(&it, end, ";base64,"))
+        return plutovg_surface_load_from_image_base64(it, end - it);
+    return NULL;
+}
+
+static void render_image(const element_t* element, const render_context_t* context, render_state_t* state)
+{
+    if(is_display_none(element) || is_visibility_hidden(element))
+        return;
+    length_t w = {0, length_type_fixed};
+    length_t h = {0, length_type_fixed};
+
+    parse_length(element, ATTR_WIDTH, &w, false, false);
+    parse_length(element, ATTR_HEIGHT, &h, false, false);
+    if(is_length_zero(w) || is_length_zero(h))
+        return;
+    length_t x = {0, length_type_fixed};
+    length_t y = {0, length_type_fixed};
+
+    parse_length(element, ATTR_X, &x, true, false);
+    parse_length(element, ATTR_Y, &y, true, false);
+
+    float _x = resolve_length(state, &x, 'x');
+    float _y = resolve_length(state, &y, 'y');
+    float _w = resolve_length(state, &w, 'x');
+    float _h = resolve_length(state, &h, 'y');
+
+    render_state_t new_state;
+    render_state_begin(element, &new_state, state);
+
+    new_state.extents.x = _x;
+    new_state.extents.y = _y;
+    new_state.extents.w = _w;
+    new_state.extents.h = _h;
+    if(state->mode == render_mode_bounding)
+        return;
+    plutovg_surface_t* image = load_image(element);
+    if(image == NULL)
+        return;
+    float width = plutovg_surface_get_width(image);
+    float height = plutovg_surface_get_height(image);
+
+    plutovg_rect_t dst_rect = {_x, _y, _w, _h};
+    plutovg_rect_t src_rect = {0, 0, width, height};
+    view_position_t position = {view_align_x_mid_y_mid, view_scale_meet};
+
+    parse_view_position(state->element, ATTR_PRESERVE_ASPECT_RATIO, &position);
+    transform_view_rect(&position, &dst_rect, &src_rect);
+
+    float scale_x = dst_rect.w / src_rect.w;
+    float scale_y = dst_rect.h / src_rect.h;
+    plutovg_matrix_t matrix = {scale_x, 0, 0, scale_y, -src_rect.x * scale_x, -src_rect.y * scale_y};
+
+    plutovg_canvas_set_matrix(context->canvas, &new_state.matrix);
+    plutovg_canvas_translate(context->canvas, dst_rect.x, dst_rect.y);
+    plutovg_canvas_set_fill_rule(context->canvas, PLUTOVG_FILL_RULE_NON_ZERO);
+    plutovg_canvas_clip_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
+    plutovg_canvas_set_opacity(context->canvas, new_state.opacity);
+    plutovg_canvas_set_texture(context->canvas, image, PLUTOVG_TEXTURE_TYPE_PLAIN, 1, &matrix);
+    plutovg_canvas_paint(context->canvas);
+    plutovg_surface_destroy(image);
+
+    render_state_end(&new_state);
+}
+
 static void render_element(const element_t* element, const render_context_t* context, render_state_t* state)
 {
     switch(element->id) {
@@ -2625,6 +2806,9 @@ static void render_element(const element_t* element, const render_context_t* con
         break;
     case TAG_PATH:
         render_path(element, context, state);
+        break;
+    case TAG_IMAGE:
+        render_image(element, context, state);
         break;
     }
 }

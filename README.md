@@ -5,7 +5,7 @@ plutosvg is a tiny SVG rendering library in C
 - Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
 - Paint Servers : solidColor, linearGradient, radialGradient
 - Document Structures: defs, svg, g, use, symbol
-- Image (TODO)
+- Image
 
 ## Basic Usage
 ```c
@@ -15,7 +15,7 @@ plutosvg is a tiny SVG rendering library in C
 
 int main(void)
 {
-    plutosvg_document_t* document = plutosvg_document_load_from_file("camera.svg", 150, 300);
+    plutosvg_document_t* document = plutosvg_document_load_from_file("camera.svg", -1, -1);
     if(document == NULL) {
         printf("Unable to load: camera.svg\n");
         return -1;
