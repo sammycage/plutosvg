@@ -24,6 +24,8 @@ if freetype_dep.found() and cc.has_type('SVG_RendererHooks', dependencies: freet
     plutosvg_deps += [freetype_dep]
     plutosvg_compile_args += ['-DPLUTOSVG_HAS_FREETYPE']
     add_project_arguments('-DPLUTOSVG_HAS_FREETYPE', language: ['c', 'cpp'])
+else
+    freetype_dep = disabler()
 endif
 
 if get_option('default_library') == 'static'
