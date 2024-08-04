@@ -1,11 +1,11 @@
 # PlutoSVG
-plutosvg is a tiny SVG rendering library in C
+plutosvg is a tiny SVG rendering library in C. It can be used for parsing and rendering SVG documents embedded in OpenType fonts.
 
 ## Features
 - Basic Shapes : rect, circle, ellipse, line, polyline, polygon, path
 - Paint Servers : solidColor, linearGradient, radialGradient
 - Document Structures: defs, svg, g, use, symbol
-- Image
+- Images
 
 ## Basic Usage
 ```c
