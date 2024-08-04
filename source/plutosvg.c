@@ -2883,6 +2883,16 @@ plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t
     return surface;
 }
 
+float plutosvg_document_get_width(const plutosvg_document_t* document)
+{
+    return document->width;
+}
+
+float plutosvg_document_get_height(const plutosvg_document_t *document)
+{
+    return document->height;
+}
+
 bool plutosvg_document_extents(const plutosvg_document_t* document, const char* id, plutovg_rect_t* extents)
 {
     render_state_t state;

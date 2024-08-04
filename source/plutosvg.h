@@ -90,7 +90,8 @@ typedef bool(*plutosvg_palette_func_t)(void* closure, const char* name, int leng
  * @param closure
  * @return
  */
-PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int length, float width, float height, plutovg_destroy_func_t destroy_func, void* closure);
+PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int length, float width, float height,
+    plutovg_destroy_func_t destroy_func, void* closure);
 
 /**
  * @brief plutosvg_document_load_from_file
@@ -127,6 +128,20 @@ PLUTOSVG_API bool plutosvg_document_render(const plutosvg_document_t* document, 
  */
 PLUTOSVG_API plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height,
     const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
+
+/**
+ * @brief plutosvg_document_get_width
+ * @param document
+ * @return
+ */
+PLUTOSVG_API float plutosvg_document_get_width(const plutosvg_document_t* document);
+
+/**
+ * @brief plutosvg_document_get_height
+ * @param document
+ * @return
+ */
+PLUTOSVG_API float plutosvg_document_get_height(const plutosvg_document_t* document);
 
 /**
  * @brief plutosvg_document_extents
