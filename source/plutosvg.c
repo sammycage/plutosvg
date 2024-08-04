@@ -481,7 +481,7 @@ static inline bool parse_float(const char** begin, const char* end, float* numbe
         fraction /= divisor;
     }
 
-    if(it < end && (*it == 'e' || *it == 'E') && (it[1] != 'x' && it[1] != 'm')) {
+    if(it + 1 < end && (it[0] == 'e' || it[0] == 'E') && (it[1] != 'x' && it[1] != 'm')) {
         ++it;
         if(it < end && *it == '+')
             ++it;
@@ -983,7 +983,7 @@ static bool parse_url_value(const char** begin, const char* end, string_t* id)
     return true;
 }
 
-#define IS_ALPHA(c) ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z')
+#define IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
 #define IS_STARTNAMECHAR(c) (IS_ALPHA(c) ||  (c) == '_' || (c) == ':')
 #define IS_NAMECHAR(c) (IS_STARTNAMECHAR(c) || IS_NUM(c) || (c) == '-' || (c) == '.')
 static bool parse_paint(const element_t* element, int id, paint_t* paint)

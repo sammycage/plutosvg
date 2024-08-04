@@ -45,13 +45,13 @@ int main(void)
     FT_Library library;
 
     // Initialize the FreeType library
-    if (FT_Init_FreeType(&library)) {
+    if(FT_Init_FreeType(&library)) {
         // Handle error
         return -1;
     }
 
     // Set PlutoSVG hooks for the SVG module
-    if (FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())) {
+    if(FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())) {
         // Handle error
         return -1;
     }
