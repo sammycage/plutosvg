@@ -167,8 +167,11 @@ PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document,
 PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 
 /**
- * @brief plutosvg_ft_svg_hooks
- * @return
+ * @brief Returns a pointer to a structure containing PlutoSVG hooks for integration with FreeType's SVG module.
+ *
+ * These hooks enable FreeType to use PlutoSVG for rendering SVG graphics embedded in fonts.
+ *
+ * @return a pointer to a structure containing PlutoSVG hooks for integration with FreeType's SVG module.
  */
 PLUTOSVG_API const void* plutosvg_ft_svg_hooks(void);
 
