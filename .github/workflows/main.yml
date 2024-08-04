@@ -7,14 +7,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libfreetype6-dev \
-            ninja-build \
-            meson
-            
+          python -m pip install meson
+          python -m pip install ninja
+          
       - name: Setup and Build
         run: |
           meson setup build
