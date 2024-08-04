@@ -19,7 +19,8 @@ freetype_dep = dependency('freetype2',
 plutosvg_compile_args = []
 plutosvg_deps = [plutovg_dep]
 
-if freetype_dep.found()
+cc = meson.get_compiler('c')
+if freetype_dep.found() and cc.has_type('SVG_RendererHooks', dependencies: freetype_dep, prefix: '#include <freetype/otsvg.h>')
     plutosvg_deps += [freetype_dep]
     plutosvg_compile_args += ['-DPLUTOSVG_HAS_FREETYPE']
     add_project_arguments('-DPLUTOSVG_HAS_FREETYPE', language: ['c', 'cpp'])
