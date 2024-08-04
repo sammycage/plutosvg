@@ -2930,7 +2930,7 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
 #ifdef PLUTOSVG_HAS_FREETYPE
 
 #include <ft2build.h>
-#include FT_OTSVG_H
+#include <freetype/otsvg.h>
 
 typedef struct {
     plutosvg_document_t* document;
