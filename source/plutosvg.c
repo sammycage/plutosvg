@@ -2940,7 +2940,7 @@ typedef struct {
 
 static FT_Error ft_svg_init(FT_Pointer* state)
 {
-    *state = malloc(sizeof(ft_svg_state));
+    *state = calloc(1, sizeof(ft_svg_state));
     return FT_Err_Ok;
 }
 
@@ -2978,14 +2978,15 @@ static FT_Error ft_svg_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
     plutovg_canvas_destroy(canvas);
     plutovg_surface_destroy(surface);
     plutosvg_document_destroy(state->document);
+    state->document = NULL;
     return FT_Err_Ok;
 }
 
 static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Pointer* ft_state)
 {
     ft_svg_state* state = *ft_state;
-    state->document = NULL;
-
+    if(state->document != NULL)
+        return FT_Err_Ok;
     FT_SVG_Document ft_document = (FT_SVG_Document)ft_slot->other;
     FT_Size_Metrics ft_metrics = ft_document->metrics;
 

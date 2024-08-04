@@ -31,6 +31,39 @@ int main(void)
 
 ![camera.png](camera.png)
 
+## Integrating with FreeType
+
+```c
+#include <plutosvg.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_MODULE_H
+
+int main(void)
+{
+    FT_Library library;
+
+    // Initialize the FreeType library
+    if (FT_Init_FreeType(&library)) {
+        // Handle error
+        return -1;
+    }
+
+    // Set PlutoSVG hooks for the SVG module
+    if (FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())) {
+        // Handle error
+        return -1;
+    }
+
+    // Your code here
+
+    // Clean up
+    FT_Done_FreeType(library);
+
+    return 0;
+}
+```
+
 ## Installation
 
 Ensure you have [Meson](http://mesonbuild.com) and [Ninja](http://ninja-build.org) installed.

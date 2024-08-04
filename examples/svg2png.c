@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     if(argc != 3 && argc != 4) {
-        printf("Usage : svg2png input output [id]\n");
+        printf("Usage: svg2png input output [id]\n");
         return -1;
     }
 

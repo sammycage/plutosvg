@@ -5,7 +5,6 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_MODULE_H
-#include FT_CONFIG_OPTIONS_H
 
 #define handle_error(status) if(status) { error = status; goto cleanup; }
 
