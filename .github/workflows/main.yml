@@ -18,6 +18,7 @@ jobs:
       - name: Setup and Build
         run: |
           meson setup build
+          cat build/meson-logs/meson-log.txt
           meson compile -C build
           
   macos:
