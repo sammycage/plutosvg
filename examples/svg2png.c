@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     plutovg_surface_write_to_png(surface, output);
     printf("Generated PNG: %s\n", output);
 cleanup:
-    plutosvg_document_destroy(document);
     plutovg_surface_destroy(surface);
+    plutosvg_document_destroy(document);
     return 0;
 }

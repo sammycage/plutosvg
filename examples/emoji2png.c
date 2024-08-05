@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
         sprintf(name, "emoji-%lx.png", codepoint);
         plutovg_surface_write_to_png(surface, name);
         fprintf(stdout, "Generated Emoji: %s\n", name);
+        plutovg_surface_destroy(surface);
     } else {
         fprintf(stderr, "The glyph for codepoint %lx is not in color mode.\n", codepoint);
     }
