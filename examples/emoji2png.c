@@ -6,8 +6,6 @@
 #include FT_FREETYPE_H
 #include FT_MODULE_H
 
-#define handle_error(status) if(status) { error = status; goto cleanup; }
-
 int main(int argc, char* argv[])
 {
     if(argc != 4) {
@@ -23,11 +21,11 @@ int main(int argc, char* argv[])
     FT_Face face = NULL;
     FT_Error error = FT_Err_Ok;
 
-    handle_error(FT_Init_FreeType(&library));
-    handle_error(FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks()));
-    handle_error(FT_New_Face(library, filename, 0, &face));
-    handle_error(FT_Set_Pixel_Sizes(face, 0, size));
-    handle_error(FT_Load_Char(face, codepoint, FT_LOAD_RENDER | FT_LOAD_COLOR));
+    if((error = FT_Init_FreeType(&library))) goto cleanup;
+    if((error = FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks()))) goto cleanup;
+    if((error = FT_New_Face(library, filename, 0, &face))) goto cleanup;
+    if((error = FT_Set_Pixel_Sizes(face, 0, size))) goto cleanup;
+    if((error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER | FT_LOAD_COLOR))) goto cleanup;
 
     if(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
         FT_GlyphSlot slot = face->glyph;
