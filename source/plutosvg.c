@@ -531,13 +531,6 @@ static inline bool skip_delim(const char** begin, const char* end, const char de
     return false;
 }
 
-static inline bool string_eq(const char* it, const char* end, const char* data)
-{
-    if(skip_string(&it, end, data))
-        return it == end;
-    return false;
-}
-
 static const char* string_find(const char* it, const char* end, const char* data)
 {
     while(it < end) {
@@ -565,13 +558,6 @@ static inline const char* rtrim(const char* begin, const char* end)
     while(end > begin && IS_WS(end[-1]))
         --end;
     return end;
-}
-
-static inline const char* ltrim(const char* begin, const char* end)
-{
-    while(begin < end && IS_WS(*begin))
-        ++begin;
-    return begin;
 }
 
 static inline bool skip_ws_delim(const char** begin, const char* end, char delim)
