@@ -59,6 +59,8 @@ int main(void)
 }
 ```
 
+![emojis](https://github.com/user-attachments/assets/a5de9b70-39a8-4a15-a012-22ab3cb93054)
+
 ## Installation
 
 Ensure you have [Meson](http://mesonbuild.com) and [Ninja](http://ninja-build.org) installed.
