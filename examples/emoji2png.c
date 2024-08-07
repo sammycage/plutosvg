@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
     if((error = FT_Set_Pixel_Sizes(face, 0, size))) goto cleanup;
     if((error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER | FT_LOAD_COLOR))) goto cleanup;
 
-    if(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
-        FT_GlyphSlot slot = face->glyph;
+    FT_GlyphSlot slot = face->glyph;
+    if(slot->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
         plutovg_surface_t* surface = plutovg_surface_create_for_data(slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
 
         char name[64];
