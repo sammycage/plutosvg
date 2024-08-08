@@ -2920,24 +2920,38 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
 
 typedef struct {
     plutosvg_document_t* document;
+    const FT_Byte* data;
+    FT_ULong length;
+} ft_svg_document_entry_t;
+
+#define MAX_DOC 16
+typedef struct {
+    plutosvg_document_t* document;
     plutovg_matrix_t matrix;
     plutovg_rect_t extents;
-} ft_svg_state;
+    ft_svg_document_entry_t entries[MAX_DOC];
+    size_t nentries;
+} ft_svg_state_t;
 
-static FT_Error ft_svg_init(FT_Pointer* state)
+static FT_Error ft_svg_init(FT_Pointer* ft_state)
 {
-    *state = calloc(1, sizeof(ft_svg_state));
+    ft_svg_state_t* state = malloc(sizeof(ft_svg_state_t));
+    memset(state, 0, sizeof(ft_svg_state_t));
+    *ft_state = state;
     return FT_Err_Ok;
 }
 
-static void ft_svg_free(FT_Pointer* state)
+static void ft_svg_free(FT_Pointer* ft_state)
 {
-    free(*state);
+    ft_svg_state_t* state = *ft_state;
+    for(int i = 0; i < state->nentries; ++i)
+        plutosvg_document_destroy(state->entries[i].document);
+    free(*ft_state);
 }
 
 static FT_Error ft_svg_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 {
-    ft_svg_state* state = *ft_state;
+    ft_svg_state_t* state = *ft_state;
     if(state->document == NULL)
         return FT_Err_Invalid_SVG_Document;
     plutovg_surface_t* surface = plutovg_surface_create_for_data(ft_slot->bitmap.buffer, ft_slot->bitmap.width, ft_slot->bitmap.rows, ft_slot->bitmap.pitch);
@@ -2963,16 +2977,39 @@ static FT_Error ft_svg_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 
     plutovg_canvas_destroy(canvas);
     plutovg_surface_destroy(surface);
-    plutosvg_document_destroy(state->document);
-    state->document = NULL;
     return FT_Err_Ok;
+}
+
+static plutosvg_document_t* ft_svg_document_load(ft_svg_state_t* state, const FT_Byte* data, FT_ULong length, FT_UShort units_per_EM)
+{
+    for(int i = 0; i < state->nentries; ++i) {
+        if(data == state->entries[i].data
+            && length == state->entries[i].length) {
+            return state->entries[i].document;
+        }
+    }
+
+    plutosvg_document_t* document = plutosvg_document_load_from_data((const char*)data, length, units_per_EM, units_per_EM, NULL, NULL);
+    if(document == NULL)
+        return NULL;
+    if(state->nentries == MAX_DOC) {
+        state->nentries--;
+        plutosvg_document_destroy(state->entries[state->nentries].document);
+    }
+
+    memmove(&state->entries[1], &state->entries[0], state->nentries * sizeof(ft_svg_document_entry_t));
+    state->entries[0].document = document;
+    state->entries[0].data = data;
+    state->entries[0].length = length;
+    state->nentries++;
+    return document;
 }
 
 static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Pointer* ft_state)
 {
-    ft_svg_state* state = *ft_state;
-    if(state->document != NULL)
-        return FT_Err_Ok;
+    ft_svg_state_t* state = *ft_state;
+    state->document = NULL;
+
     FT_SVG_Document ft_document = (FT_SVG_Document)ft_slot->other;
     FT_Size_Metrics ft_metrics = ft_document->metrics;
 
@@ -2980,9 +3017,11 @@ static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Po
     FT_UShort start_glyph_id = ft_document->start_glyph_id;
     FT_UShort end_glyph_id = ft_document->end_glyph_id;
 
-    plutosvg_document_t* document = plutosvg_document_load_from_data((const char*)ft_document->svg_document, ft_document->svg_document_length, units_per_EM, units_per_EM, NULL, NULL);
-    if(document == NULL)
+    plutosvg_document_t* document = ft_svg_document_load(state, ft_document->svg_document, ft_document->svg_document_length, units_per_EM);
+    if(document == NULL) {
         return FT_Err_Invalid_SVG_Document;
+    }
+
     plutovg_matrix_t transform = {
         (float)ft_document->transform.xx / (1 << 16),
         -(float)ft_document->transform.xy / (1 << 16),
@@ -3008,7 +3047,6 @@ static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Po
 
     plutovg_rect_t extents;
     if(!plutosvg_document_extents(document, id, &extents)) {
-        plutosvg_document_destroy(document);
         return FT_Err_Invalid_SVG_Document;
     }
 
@@ -3037,15 +3075,12 @@ static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Po
     ft_slot->metrics.horiBearingY = (FT_Pos)(horiBearingY * 64);
     ft_slot->metrics.vertBearingX = (FT_Pos)(vertBearingX * 64);
     ft_slot->metrics.vertBearingY = (FT_Pos)(vertBearingY * 64);
-
     if(ft_slot->metrics.vertAdvance == 0)
         ft_slot->metrics.vertAdvance = (FT_Pos)(metrics_height * 1.2f * 64);
     if(ft_cache) {
         state->document = document;
         state->extents = extents;
         state->matrix = matrix;
-    } else {
-        plutosvg_document_destroy(document);
     }
 
     return FT_Err_Ok;
