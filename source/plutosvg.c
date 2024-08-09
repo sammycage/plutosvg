@@ -2177,10 +2177,10 @@ static bool apply_paint(render_state_t* state, const render_context_t* context, 
     return false;
 }
 
-static void render_context_draw(const render_context_t* context, render_state_t* state)
+static void draw_shape(const element_t* element, const render_context_t* context, render_state_t* state)
 {
     paint_t stroke = {paint_type_none};
-    parse_paint(state->element, ATTR_STROKE, &stroke);
+    parse_paint(element, ATTR_STROKE, &stroke);
 
     length_t stroke_width = {1.f, length_type_fixed};
     plutovg_line_cap_t line_cap = PLUTOVG_LINE_CAP_BUTT;
@@ -2188,10 +2188,10 @@ static void render_context_draw(const render_context_t* context, render_state_t*
     float miter_limit = 4.f;
 
     if(stroke.type > paint_type_none) {
-        parse_length(state->element, ATTR_STROKE_WIDTH, &stroke_width, false, true);
-        parse_line_cap(state->element, ATTR_STROKE_LINECAP, &line_cap);
-        parse_line_join(state->element, ATTR_STROKE_LINEJOIN, &line_join);
-        parse_number(state->element, ATTR_STROKE_MITERLIMIT, &miter_limit, false, true);
+        parse_length(element, ATTR_STROKE_WIDTH, &stroke_width, false, true);
+        parse_line_cap(element, ATTR_STROKE_LINECAP, &line_cap);
+        parse_line_join(element, ATTR_STROKE_LINEJOIN, &line_join);
+        parse_number(element, ATTR_STROKE_MITERLIMIT, &miter_limit, false, true);
     }
 
     if(state->mode == render_mode_bounding) {
@@ -2215,14 +2215,14 @@ static void render_context_draw(const render_context_t* context, render_state_t*
     }
 
     paint_t fill = {paint_type_color, {color_type_fixed, 0xFF000000}};
-    parse_paint(state->element, ATTR_FILL, &fill);
+    parse_paint(element, ATTR_FILL, &fill);
 
     if(apply_paint(state, context, &fill)) {
         float fill_opacity = 1.f;
-        parse_number(state->element, ATTR_FILL_OPACITY, &fill_opacity, true, true);
+        parse_number(element, ATTR_FILL_OPACITY, &fill_opacity, true, true);
 
         plutovg_fill_rule_t fill_rule = PLUTOVG_FILL_RULE_NON_ZERO;
-        parse_fill_rule(state->element, ATTR_FILL_RULE, &fill_rule);
+        parse_fill_rule(element, ATTR_FILL_RULE, &fill_rule);
 
         plutovg_canvas_set_fill_rule(context->canvas, fill_rule);
         plutovg_canvas_set_opacity(context->canvas, fill_opacity * state->opacity);
@@ -2232,13 +2232,13 @@ static void render_context_draw(const render_context_t* context, render_state_t*
 
     if(apply_paint(state, context, &stroke)) {
         float stroke_opacity = 1.f;
-        parse_number(state->element, ATTR_STROKE_OPACITY, &stroke_opacity, true, true);
+        parse_number(element, ATTR_STROKE_OPACITY, &stroke_opacity, true, true);
 
         length_t dash_offset = {0.f, length_type_fixed};
-        parse_length(state->element, ATTR_STROKE_DASHOFFSET, &dash_offset, false, true);
+        parse_length(element, ATTR_STROKE_DASHOFFSET, &dash_offset, false, true);
 
         stroke_dash_array_t dash_array = {0};
-        parse_dash_array(state->element, ATTR_STROKE_DASHARRAY, &dash_array);
+        parse_dash_array(element, ATTR_STROKE_DASHARRAY, &dash_array);
 
         float dashes[MAX_DASHES];
         for(int i = 0; i < dash_array.size; ++i) {
@@ -2453,7 +2453,7 @@ static void render_line(const element_t* element, const render_context_t* contex
     plutovg_path_reset(context->document->path);
     plutovg_path_move_to(context->document->path, _x1, _y1);
     plutovg_path_line_to(context->document->path, _x2, _y2);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2489,7 +2489,7 @@ static void render_ellipse(const element_t* element, const render_context_t* con
 
     plutovg_path_reset(context->document->path);
     plutovg_path_add_ellipse(context->document->path, _cx, _cy, _rx, _ry);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2521,7 +2521,7 @@ static void render_circle(const element_t* element, const render_context_t* cont
 
     plutovg_path_reset(context->document->path);
     plutovg_path_add_circle(context->document->path, _cx, _cy, _r);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2569,7 +2569,7 @@ static void render_rect(const element_t* element, const render_context_t* contex
 
     plutovg_path_reset(context->document->path);
     plutovg_path_add_round_rect(context->document->path, _x, _y, _w, _h, _rx, _ry);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2583,7 +2583,7 @@ static void render_poly(const element_t* element, const render_context_t* contex
     plutovg_path_reset(context->document->path);
     parse_points(element, ATTR_POINTS, context->document->path);
     plutovg_path_extents(context->document->path, &new_state.extents);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2597,7 +2597,7 @@ static void render_path(const element_t* element, const render_context_t* contex
     plutovg_path_reset(context->document->path);
     parse_path(element, ATTR_D, context->document->path);
     plutovg_path_extents(context->document->path, &new_state.extents);
-    render_context_draw(context, &new_state);
+    draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
 
@@ -2704,6 +2704,37 @@ static plutovg_surface_t* load_image(const element_t* element)
     return NULL;
 }
 
+static void draw_image(const element_t* element, const render_context_t* context, render_state_t* state, float x, float y, float width, float height)
+{
+    if(state->mode == render_mode_bounding)
+        return;
+    plutovg_surface_t* image = load_image(element);
+    if(image == NULL)
+        return;
+    float image_width = plutovg_surface_get_width(image);
+    float image_height = plutovg_surface_get_height(image);
+
+    plutovg_rect_t dst_rect = {x, y, width, height};
+    plutovg_rect_t src_rect = {0, 0, image_width, image_height};
+    view_position_t position = {view_align_x_mid_y_mid, view_scale_meet};
+
+    parse_view_position(element, ATTR_PRESERVE_ASPECT_RATIO, &position);
+    transform_view_rect(&position, &dst_rect, &src_rect);
+
+    float scale_x = dst_rect.w / src_rect.w;
+    float scale_y = dst_rect.h / src_rect.h;
+    plutovg_matrix_t matrix = {scale_x, 0, 0, scale_y, -src_rect.x * scale_x, -src_rect.y * scale_y};
+
+    plutovg_canvas_set_fill_rule(context->canvas, PLUTOVG_FILL_RULE_NON_ZERO);
+    plutovg_canvas_set_opacity(context->canvas, state->opacity);
+    plutovg_canvas_set_matrix(context->canvas, &state->matrix);
+    plutovg_canvas_translate(context->canvas, dst_rect.x, dst_rect.y);
+    plutovg_canvas_clip_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
+    plutovg_canvas_set_texture(context->canvas, image, PLUTOVG_TEXTURE_TYPE_PLAIN, 1, &matrix);
+    plutovg_canvas_paint(context->canvas);
+    plutovg_surface_destroy(image);
+}
+
 static void render_image(const element_t* element, const render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
@@ -2733,34 +2764,7 @@ static void render_image(const element_t* element, const render_context_t* conte
     new_state.extents.y = _y;
     new_state.extents.w = _w;
     new_state.extents.h = _h;
-    if(state->mode == render_mode_bounding)
-        return;
-    plutovg_surface_t* image = load_image(element);
-    if(image == NULL)
-        return;
-    float width = plutovg_surface_get_width(image);
-    float height = plutovg_surface_get_height(image);
-
-    plutovg_rect_t dst_rect = {_x, _y, _w, _h};
-    plutovg_rect_t src_rect = {0, 0, width, height};
-    view_position_t position = {view_align_x_mid_y_mid, view_scale_meet};
-
-    parse_view_position(element, ATTR_PRESERVE_ASPECT_RATIO, &position);
-    transform_view_rect(&position, &dst_rect, &src_rect);
-
-    float scale_x = dst_rect.w / src_rect.w;
-    float scale_y = dst_rect.h / src_rect.h;
-    plutovg_matrix_t matrix = {scale_x, 0, 0, scale_y, -src_rect.x * scale_x, -src_rect.y * scale_y};
-
-    plutovg_canvas_set_fill_rule(context->canvas, PLUTOVG_FILL_RULE_NON_ZERO);
-    plutovg_canvas_set_opacity(context->canvas, new_state.opacity);
-    plutovg_canvas_set_matrix(context->canvas, &new_state.matrix);
-    plutovg_canvas_translate(context->canvas, dst_rect.x, dst_rect.y);
-    plutovg_canvas_clip_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
-    plutovg_canvas_set_texture(context->canvas, image, PLUTOVG_TEXTURE_TYPE_PLAIN, 1, &matrix);
-    plutovg_canvas_paint(context->canvas);
-    plutovg_surface_destroy(image);
-
+    draw_image(element, context, &new_state, _x, _y, _w, _h);
     render_state_end(&new_state);
 }
 
@@ -2924,12 +2928,12 @@ typedef struct {
     FT_ULong length;
 } ft_svg_document_entry_t;
 
-#define MAX_DOC 16
+#define MAX_DOCS 16
 typedef struct {
     plutosvg_document_t* document;
     plutovg_matrix_t matrix;
     plutovg_rect_t extents;
-    ft_svg_document_entry_t entries[MAX_DOC];
+    ft_svg_document_entry_t entries[MAX_DOCS];
     size_t nentries;
 } ft_svg_state_t;
 
@@ -2982,17 +2986,20 @@ static FT_Error ft_svg_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 
 static plutosvg_document_t* ft_svg_document_load(ft_svg_state_t* state, const FT_Byte* data, FT_ULong length, FT_UShort units_per_EM)
 {
-    for(int i = 0; i < state->nentries; ++i) {
+    for(size_t i = 0; i < state->nentries; ++i) {
         if(data == state->entries[i].data
             && length == state->entries[i].length) {
-            return state->entries[i].document;
+            ft_svg_document_entry_t entry = state->entries[i];
+            memmove(&state->entries[1], &state->entries[0], i * sizeof(ft_svg_document_entry_t));
+            state->entries[0] = entry;
+            return entry.document;
         }
     }
 
     plutosvg_document_t* document = plutosvg_document_load_from_data((const char*)data, length, units_per_EM, units_per_EM, NULL, NULL);
     if(document == NULL)
         return NULL;
-    if(state->nentries == MAX_DOC) {
+    if(state->nentries == MAX_DOCS) {
         state->nentries--;
         plutosvg_document_destroy(state->entries[state->nentries].document);
     }
@@ -3013,11 +3020,10 @@ static FT_Error ft_svg_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Po
     FT_SVG_Document ft_document = (FT_SVG_Document)ft_slot->other;
     FT_Size_Metrics ft_metrics = ft_document->metrics;
 
-    FT_UShort units_per_EM = ft_document->units_per_EM;
     FT_UShort start_glyph_id = ft_document->start_glyph_id;
     FT_UShort end_glyph_id = ft_document->end_glyph_id;
 
-    plutosvg_document_t* document = ft_svg_document_load(state, ft_document->svg_document, ft_document->svg_document_length, units_per_EM);
+    plutosvg_document_t* document = ft_svg_document_load(state, ft_document->svg_document, ft_document->svg_document_length, ft_document->units_per_EM);
     if(document == NULL) {
         return FT_Err_Invalid_SVG_Document;
     }
