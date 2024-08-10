@@ -21,21 +21,26 @@ int main(int argc, char* argv[])
     FT_Face face = NULL;
     FT_Error error = FT_Err_Ok;
 
-    if((error = FT_Init_FreeType(&library))) goto cleanup;
-    if((error = FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks()))) goto cleanup;
-    if((error = FT_New_Face(library, filename, 0, &face))) goto cleanup;
-    if((error = FT_Set_Pixel_Sizes(face, 0, size))) goto cleanup;
-    if((error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER | FT_LOAD_COLOR))) goto cleanup;
+    if((error = FT_Init_FreeType(&library)))
+        goto cleanup;
+    if((error = FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())))
+        goto cleanup;
+    if((error = FT_New_Face(library, filename, 0, &face)))
+        goto cleanup;
+    if((error = FT_Set_Pixel_Sizes(face, 0, size)))
+        goto cleanup;
+    if((error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER | FT_LOAD_COLOR))) {
+        goto cleanup;
+    }
 
     FT_GlyphSlot slot = face->glyph;
     if(slot->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
-        plutovg_surface_t* surface = plutovg_surface_create_for_data(slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
-
         char name[64];
         sprintf(name, "emoji-%lx.png", codepoint);
+        plutovg_surface_t* surface = plutovg_surface_create_for_data(slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
         plutovg_surface_write_to_png(surface, name);
-        fprintf(stdout, "Generated Emoji: %s\n", name);
         plutovg_surface_destroy(surface);
+        fprintf(stdout, "Generated Emoji: %s\n", name);
     } else {
         fprintf(stderr, "The glyph for codepoint %lx is not in color mode.\n", codepoint);
     }
