@@ -2842,12 +2842,10 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
 plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height, const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure)
 {
     plutovg_rect_t extents = {0, 0, document->width, document->height};
-    if(id != NULL) {
-        plutosvg_document_extents(document, id, &extents);
-    }
-
+    if(id && !plutosvg_document_extents(document, id, &extents))
+        return NULL;
     if(extents.w <= 0.f || extents.h <= 0.f)
-        return false;
+        return NULL;
     if(width <= 0 && height <= 0) {
         width = (int)(ceilf(extents.w));
         height = (int)(ceilf(extents.h));

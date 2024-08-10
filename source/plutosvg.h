@@ -115,7 +115,7 @@ PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_file(const char* f
  * @param document Pointer to the SVG document.
  * @param id ID of the SVG element to render, or `NULL` to render the entire document.
  * @param canvas Canvas onto which the SVG element or document will be rendered.
- * @param current_color Color used to resolve CSS 'currentColor' values.
+ * @param current_color Color used to resolve CSS `currentColor` values.
  * @param palette_func Callback for resolving CSS color variables.
  * @param closure User-defined data for the `palette_func` callback.
  * @return `true` if rendering was successful; `false` otherwise.
