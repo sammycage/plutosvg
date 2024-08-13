@@ -1,4 +1,4 @@
-![PlutoSVG](https://github.com/user-attachments/assets/a5de9b70-39a8-4a15-a012-22ab3cb93054)
+![emoji-collection.png](https://github.com/user-attachments/assets/a5de9b70-39a8-4a15-a012-22ab3cb93054)
 
 # PlutoSVG
 
@@ -27,7 +27,7 @@ int main(void)
 }
 ```
 
-![camera.png](camera.png)
+![camera.png](https://github.com/sammycage/plutosvg/blob/master/camera.png)
 
 ## Integrating with FreeType
 
