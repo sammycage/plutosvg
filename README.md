@@ -1,8 +1,11 @@
+![PlutoSVG](https://github.com/user-attachments/assets/a5de9b70-39a8-4a15-a012-22ab3cb93054)
+
 # PlutoSVG
 
 PlutoSVG is a compact and efficient SVG rendering library in C, designed for parsing and rendering SVG documents embedded in OpenType fonts. It is optimized for speed and minimal memory usage. It supports all elements specified in the [OpenType SVG specifications](https://learn.microsoft.com/en-us/typography/opentype/spec/svg) except `clipPath`. It also supports the [CSS `var()` function](https://www.w3.org/TR/css-variables/#using-variables) for referencing colors defined in the [CPAL table](https://learn.microsoft.com/en-us/typography/opentype/spec/cpal) as custom properties. Additionally, it supports the `style` attribute, the CSS `inherit` keyword, and the `<symbol>` element. This ensures compatibility with most SVG files exported from popular vector editors such as Illustrator, Sketch, Inkscape, Xara, and Corel Draw.
 
 ## Basic Usage
+
 ```c
 #include <plutosvg.h>
 
@@ -58,8 +61,6 @@ int main(void)
     return 0;
 }
 ```
-
-![emojis](https://github.com/user-attachments/assets/a5de9b70-39a8-4a15-a012-22ab3cb93054)
 
 ## Installation
 

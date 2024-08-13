@@ -1292,8 +1292,8 @@ static bool parse_dash_array(const element_t* element, int id, stroke_dash_array
     while(it < end && dash_array->size < MAX_DASHES) {
         if(!parse_length_value(&it, end, dash_array->data + dash_array->size, false))
             return false;
-        dash_array->size += 1;
         skip_ws_comma(&it, end);
+        dash_array->size += 1;
     }
 
     return true;
@@ -2948,7 +2948,7 @@ static void ft_svg_free(FT_Pointer* ft_state)
     ft_svg_state_t* state = *ft_state;
     for(int i = 0; i < state->nentries; ++i)
         plutosvg_document_destroy(state->entries[i].document);
-    free(*ft_state);
+    free(state);
 }
 
 static FT_Error ft_svg_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
