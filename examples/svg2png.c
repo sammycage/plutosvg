@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     if(argc != 3 && argc != 4) {
-        printf("Usage: svg2png input output [id]\n");
+        fprintf(stderr, "Usage: svg2png input output [id]\n");
         return -1;
     }
 
@@ -19,20 +19,26 @@ int main(int argc, char* argv[])
     plutosvg_document_t* document = NULL;
     plutovg_surface_t* surface = NULL;
 
+    fprintf(stdout, "Loading: %s\n", input);
     document = plutosvg_document_load_from_file(input, -1, -1);
     if(document == NULL) {
-        printf("Unable to load: %s\n", input);
+        fprintf(stderr, "Unable to load: %s\n", input);
         goto cleanup;
     }
 
+    fprintf(stdout, "Rendering: %s\n", input);
     surface = plutosvg_document_render_to_surface(document, id, -1, -1, NULL, NULL, NULL);
     if(surface == NULL) {
-        printf("Unable to render (%s)\n", id);
+        fprintf(stderr, "Unable to render: %s\n", input);
         goto cleanup;
     }
 
-    plutovg_surface_write_to_png(surface, output);
-    printf("Generated PNG: %s\n", output);
+    fprintf(stdout, "Writing: %s\n", output);
+    if(!plutovg_surface_write_to_png(surface, output)) {
+        fprintf(stderr, "Unable to write: %s\n", output);
+        goto cleanup;
+    }
+
 cleanup:
     plutovg_surface_destroy(surface);
     plutosvg_document_destroy(document);
