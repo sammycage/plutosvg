@@ -1736,13 +1736,18 @@ error:
 plutosvg_document_t* plutosvg_document_load_from_file(const char* filename, float width, float height)
 {
     FILE* fp = fopen(filename, "rb");
-    if(fp == NULL)
+    if(fp == NULL) {
         return NULL;
+    }
+
     fseek(fp, 0, SEEK_END);
     long length = ftell(fp);
-    void* data = NULL;
-    if(length != -1L)
-        data = malloc(length);
+    if(length == -1L) {
+        fclose(fp);
+        return NULL;
+    }
+
+    void* data = malloc(length);
     if(data == NULL) {
         fclose(fp);
         return NULL;
@@ -1751,7 +1756,8 @@ plutosvg_document_t* plutosvg_document_load_from_file(const char* filename, floa
     fseek(fp, 0, SEEK_SET);
     size_t nread = fread(data, 1, length, fp);
     fclose(fp);
-    if(length != nread) {
+
+    if(nread != length) {
         free(data);
         return NULL;
     }
