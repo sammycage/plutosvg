@@ -1,6 +1,12 @@
 #include <plutosvg.h>
 
 #include <stdio.h>
+#include <time.h>
+
+static double elapsed_time(clock_t start, clock_t end)
+{
+    return ((double)(end - start)) / CLOCKS_PER_SEC;
+}
 
 int main(int argc, char* argv[])
 {
@@ -18,27 +24,38 @@ int main(int argc, char* argv[])
 
     plutosvg_document_t* document = NULL;
     plutovg_surface_t* surface = NULL;
+    clock_t start, end;
 
-    fprintf(stdout, "Loading: %s\n", input);
+    start = clock();
     document = plutosvg_document_load_from_file(input, -1, -1);
+    end = clock();
+
     if(document == NULL) {
-        fprintf(stderr, "Unable to load: %s\n", input);
+        fprintf(stderr, "Unable to load '%s'\n", input);
         goto cleanup;
     }
 
-    fprintf(stdout, "Rendering: %s\n", input);
+    fprintf(stdout, "Finished loading '%s' in %.3f seconds\n", input, elapsed_time(start, end));
+
+    start = clock();
     surface = plutosvg_document_render_to_surface(document, id, -1, -1, NULL, NULL, NULL);
+    end = clock();
+
     if(surface == NULL) {
-        fprintf(stderr, "Unable to render: %s\n", input);
+        fprintf(stderr, "Unable to render '%s'\n", input);
         goto cleanup;
     }
 
-    fprintf(stdout, "Writing: %s\n", output);
+    fprintf(stdout, "Finished rendering '%s' in %.3f seconds\n", input, elapsed_time(start, end));
+
+    start = clock();
     if(!plutovg_surface_write_to_png(surface, output)) {
-        fprintf(stderr, "Unable to write: %s\n", output);
+        fprintf(stderr, "Unable to write '%s'\n", output);
         goto cleanup;
     }
+    end = clock();
 
+    fprintf(stdout, "Finished writing '%s' in %.3f seconds\n", output, elapsed_time(start, end));
 cleanup:
     plutovg_surface_destroy(surface);
     plutosvg_document_destroy(document);
