@@ -1718,6 +1718,12 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
                     intrinsic_width = view_box.w;
                     intrinsic_height = view_box.h;
                 }
+            } else {
+                if(intrinsic_width == -1)
+                    intrinsic_width = 300;
+                if(intrinsic_height == -1) {
+                    intrinsic_height = 150;
+                }
             }
         }
 
