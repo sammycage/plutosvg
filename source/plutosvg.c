@@ -1188,7 +1188,6 @@ static bool parse_transform_value(const char** begin, const char* end, transform
     return true;
 }
 
-#define PI 3.14159265358979323846f
 static bool parse_transform(const element_t* element, int id, plutovg_matrix_t* matrix)
 {
     const string_t* value = find_attribute(element, id, false);
@@ -1212,7 +1211,7 @@ static bool parse_transform(const element_t* element, int id, plutovg_matrix_t* 
         case transform_type_rotate:
             if(count == 3)
                 plutovg_matrix_translate(matrix, values[1], values[2]);
-            plutovg_matrix_rotate(matrix, values[0] * PI / 180.f);
+            plutovg_matrix_rotate(matrix, PLUTOVG_DEG2RAD(values[0]));
             if(count == 3)
                 plutovg_matrix_translate(matrix, -values[1], -values[2]);
             break;
@@ -1790,8 +1789,8 @@ typedef struct render_state {
     plutovg_rect_t extents;
 } render_state_t;
 
-#define INVALID_RECT ((plutovg_rect_t){0, 0, -1, -1})
-#define EMPTY_RECT ((plutovg_rect_t){0, 0, 0, 0})
+#define INVALID_RECT PLUTOVG_MAKE_RECT(0, 0, -1, -1)
+#define EMPTY_RECT PLUTOVG_MAKE_RECT(0, 0, 0, 0)
 
 #define IS_INVALID_RECT(rect) ((rect).w < 0 || (rect).h < 0)
 #define IS_EMPTY_RECT(rect) ((rect).w <= 0 || (rect).h <= 0)
@@ -1865,7 +1864,6 @@ typedef struct {
     void* closure;
 } render_context_t;
 
-#define SQRT2 1.41421356237309504880f
 static float resolve_length(const render_state_t* state, const length_t* length, char mode)
 {
     float maximum = 0.f;
@@ -1875,7 +1873,7 @@ static float resolve_length(const render_state_t* state, const length_t* length,
         } else if(mode == 'y') {
             maximum = state->view_height;
         } else if(mode == 'o') {
-            maximum = hypotf(state->view_width, state->view_height);
+            maximum = hypotf(state->view_width, state->view_height) / PLUTOVG_SQRT2;
         }
     }
 
@@ -1906,7 +1904,8 @@ static plutovg_color_t convert_color(const color_t* color)
     uint8_t r = ((color->value >> 16) & 0xff);
     uint8_t g = ((color->value >> 8) & 0xff);
     uint8_t b = ((color->value >> 0) & 0xff);
-    return (plutovg_color_t){r / 255.f, g / 255.f, b / 255.f, a / 255.f};
+
+    return PLUTOVG_MAKE_COLOR(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
 }
 
 static plutovg_color_t resolve_current_color(const render_context_t* context, const element_t* element)
@@ -1918,7 +1917,7 @@ static plutovg_color_t resolve_current_color(const render_context_t* context, co
     if(element->parent == NULL) {
         if(context->current_color)
             return *context->current_color;
-        return (plutovg_color_t){0, 0, 0, 1};
+        return PLUTOVG_BLACK_COLOR;
     }
 
     return resolve_current_color(context, element->parent);
@@ -2212,7 +2211,7 @@ static void draw_shape(const element_t* element, const render_context_t* context
         float line_width = resolve_length(state, &stroke_width, 'o');
         float cap_limit = line_width / 2.f;
         if(line_cap == PLUTOVG_LINE_CAP_SQUARE)
-            cap_limit *= SQRT2;
+            cap_limit *= PLUTOVG_SQRT2;
         float join_limit = line_width / 2.f;
         if(line_join == PLUTOVG_LINE_JOIN_MITER) {
             join_limit *= miter_limit;

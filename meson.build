@@ -5,10 +5,15 @@ project('plutosvg', 'c',
     default_options: ['c_std=c99']
 )
 
+plutosvg_deps = []
+plutosvg_compile_args = []
+
 plutovg_dep = dependency('plutovg',
     required: true,
     fallback: ['plutovg', 'plutovg_dep']
 )
+
+plutosvg_deps += [plutovg_dep]
 
 freetype_dep = dependency('freetype2',
     required: get_option('freetype'),
@@ -16,29 +21,25 @@ freetype_dep = dependency('freetype2',
     allow_fallback: false
 )
 
-plutosvg_compile_args = []
-plutosvg_deps = [plutovg_dep]
-
 cc = meson.get_compiler('c')
+
 if freetype_dep.found() and cc.has_type('SVG_RendererHooks', dependencies: freetype_dep, prefix: '#include <freetype/otsvg.h>')
     plutosvg_deps += [freetype_dep]
     plutosvg_compile_args += ['-DPLUTOSVG_HAS_FREETYPE']
-    add_project_arguments('-DPLUTOSVG_HAS_FREETYPE', language: ['c', 'cpp'])
 else
     freetype_dep = disabler()
 endif
 
 if get_option('default_library') == 'static'
     plutosvg_compile_args += ['-DPLUTOSVG_BUILD_STATIC']
-    add_project_arguments('-DPLUTOSVG_BUILD_STATIC', language: ['c', 'cpp'])
 endif
 
 plutosvg_lib = library('plutosvg', 'source/plutosvg.c',
     include_directories: include_directories('source'),
     dependencies: plutosvg_deps,
     version: meson.project_version(),
-    c_args: ['-DPLUTOSVG_BUILD'],
-    cpp_args: ['-DPLUTOSVG_BUILD'],
+    c_args: ['-DPLUTOSVG_BUILD'] + plutosvg_compile_args,
+    cpp_args: ['-DPLUTOSVG_BUILD'] + plutosvg_compile_args,
     link_args: ['-lm'],
     gnu_symbol_visibility: 'hidden',
     install: true
