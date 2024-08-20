@@ -900,116 +900,12 @@ static bool parse_view_position(const element_t* element, int id, view_position_
     return !skip_ws(&it, end);
 }
 
-typedef enum {
-    transform_type_matrix,
-    transform_type_rotate,
-    transform_type_scale,
-    transform_type_skew_x,
-    transform_type_skew_y,
-    transform_type_translate
-} transform_type_t;
-
-static bool parse_transform_value(const char** begin, const char* end, transform_type_t* type, float values[6], int* count)
-{
-    const char* it = *begin;
-    int required = 0;
-    int optional = 0;
-    if(skip_string(&it, end, "matrix")) {
-        *type = transform_type_matrix;
-        required = 6;
-        optional = 0;
-    } else if(skip_string(&it, end, "rotate")) {
-        *type = transform_type_rotate;
-        required = 1;
-        optional = 2;
-    } else if(skip_string(&it, end, "scale")) {
-        *type = transform_type_scale;
-        required = 1;
-        optional = 1;
-    } else if(skip_string(&it, end, "skewX")) {
-        *type = transform_type_skew_x;
-        required = 1;
-        optional = 0;
-    } else if(skip_string(&it, end, "skewY")) {
-        *type = transform_type_skew_y;
-        required = 1;
-        optional = 0;
-    } else if(skip_string(&it, end, "translate")) {
-        *type = transform_type_translate;
-        required = 1;
-        optional = 1;
-    } else {
-        return false;
-    }
-
-    skip_ws(&it, end);
-    if(!skip_delim(&it, end, '('))
-        return false;
-    int i = 0;
-    int max_count = required + optional;
-    skip_ws(&it, end);
-    for(; i < max_count; ++i) {
-        if(!parse_float(&it, end, values + i))
-            break;
-        skip_ws_comma(&it, end);
-    }
-
-    if(it >= end || *it != ')' || !(i == required || i == max_count))
-        return false;
-    *begin = ++it;
-    *count = i;
-    return true;
-}
-
 static bool parse_transform(const element_t* element, int id, plutovg_matrix_t* matrix)
 {
     const string_t* value = find_attribute(element, id, false);
     if(value == NULL)
         return false;
-    const char* it = value->data;
-    const char* end = it + value->length;
-
-    float values[6];
-    int count;
-    transform_type_t type;
-    plutovg_matrix_init_identity(matrix);
-    while(it < end) {
-        if(!parse_transform_value(&it, end, &type, values, &count))
-            return false;
-        skip_ws_comma(&it, end);
-        switch(type) {
-        case transform_type_matrix:
-            plutovg_matrix_multiply(matrix, (plutovg_matrix_t*)(values), matrix);
-            break;
-        case transform_type_rotate:
-            if(count == 3)
-                plutovg_matrix_translate(matrix, values[1], values[2]);
-            plutovg_matrix_rotate(matrix, PLUTOVG_DEG2RAD(values[0]));
-            if(count == 3)
-                plutovg_matrix_translate(matrix, -values[1], -values[2]);
-            break;
-        case transform_type_scale:
-            if(count == 1)
-                plutovg_matrix_scale(matrix, values[0], values[0]);
-            else
-                plutovg_matrix_scale(matrix, values[0], values[1]);
-            break;
-        case transform_type_skew_x:
-            plutovg_matrix_shear(matrix, values[0], 0);
-            break;
-        case transform_type_skew_y:
-            plutovg_matrix_shear(matrix, 0, values[0]);
-            break;
-        case transform_type_translate:
-            if(count == 1)
-                plutovg_matrix_translate(matrix, values[0], 0);
-            else
-                plutovg_matrix_translate(matrix, values[0], values[1]);
-            break;
-        }
-    }
-
-    return true;
+    return plutovg_matrix_parse(matrix, value->data, value->length);
 }
 
 static bool parse_points(const element_t* element, int id, plutovg_path_t* path)
