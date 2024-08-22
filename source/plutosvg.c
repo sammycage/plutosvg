@@ -519,17 +519,6 @@ static inline bool skip_string(const char** begin, const char* end, const char* 
     return false;
 }
 
-static inline bool skip_delim(const char** begin, const char* end, const char delim)
-{
-    const char* it = *begin;
-    if(it < end && *it == delim) {
-        *begin = it + 1;
-        return true;
-    }
-
-    return false;
-}
-
 static const char* string_find(const char* it, const char* end, const char* data)
 {
     while(it < end) {
@@ -542,6 +531,17 @@ static const char* string_find(const char* it, const char* end, const char* data
     return NULL;
 }
 
+static inline bool skip_delim(const char** begin, const char* end, const char delim)
+{
+    const char* it = *begin;
+    if(it < end && *it == delim) {
+        *begin = it + 1;
+        return true;
+    }
+
+    return false;
+}
+
 #define IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
 static inline bool skip_ws(const char** begin, const char* end)
 {
@@ -552,21 +552,13 @@ static inline bool skip_ws(const char** begin, const char* end)
     return it < end;
 }
 
-static inline const char* rtrim(const char* begin, const char* end)
-{
-    while(end > begin && IS_WS(end[-1]))
-        --end;
-    return end;
-}
-
 static inline bool skip_ws_delim(const char** begin, const char* end, char delim)
 {
     const char* it = *begin;
     if(it < end && !IS_WS(*it) && *it != delim)
         return false;
     if(skip_ws(&it, end)) {
-        if(it < end && *it == delim) {
-            ++it;
+        if(skip_delim(&it, end, delim)) {
             skip_ws(&it, end);
         }
     }
@@ -578,6 +570,13 @@ static inline bool skip_ws_delim(const char** begin, const char* end, char delim
 static inline bool skip_ws_comma(const char** begin, const char* end)
 {
     return skip_ws_delim(begin, end, ',');
+}
+
+static inline const char* rtrim(const char* begin, const char* end)
+{
+    while(end > begin && IS_WS(end[-1]))
+        --end;
+    return end;
 }
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -1216,36 +1215,21 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
     element_t* current = NULL;
     int ignoring = 0;
     while(it < end) {
-        while(it < end && *it != '<')
-            ++it;
-        if(it >= end)
-            break;
-        ++it;
-        if(it < end && *it == '/') {
-            if(current == NULL && ignoring == 0)
-                goto error;
-            ++it;
-            if(it >= end || !IS_STARTNAMECHAR(*it))
-                goto error;
-            const char* begin = it++;
-            while(it < end && IS_NAMECHAR(*it))
+        if(current == NULL) {
+            while(it < end && IS_WS(*it))
                 ++it;
-            skip_ws(&it, end);
-            if(it >= end || *it != '>')
-                goto error;
-            if(ignoring == 0) {
-                int id = elementid(begin, it - begin);
-                if(id != current->id)
-                    goto error;
-                current = current->parent;
-            } else {
-                --ignoring;
+            if(it >= end) {
+                break;
             }
-
-            ++it;
-            continue;
+        } else {
+            while(it < end && *it != '<') {
+                ++it;
+            }
         }
 
+        if(it >= end || *it != '<')
+            goto error;
+        ++it;
         if(it < end && *it == '?') {
             ++it;
             if(!skip_string(&it, end, "xml"))
@@ -1301,6 +1285,31 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
             }
 
             goto error;
+        }
+
+        if(it < end && *it == '/') {
+            if(current == NULL && ignoring == 0)
+                goto error;
+            ++it;
+            if(it >= end || !IS_STARTNAMECHAR(*it))
+                goto error;
+            const char* begin = it++;
+            while(it < end && IS_NAMECHAR(*it))
+                ++it;
+            skip_ws(&it, end);
+            if(it >= end || *it != '>')
+                goto error;
+            if(ignoring == 0) {
+                int id = elementid(begin, it - begin);
+                if(id != current->id)
+                    goto error;
+                current = current->parent;
+            } else {
+                --ignoring;
+            }
+
+            ++it;
+            continue;
         }
 
         if(it >= end || !IS_STARTNAMECHAR(*it))
