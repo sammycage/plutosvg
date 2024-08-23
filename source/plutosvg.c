@@ -2268,7 +2268,7 @@ static void render_poly(const element_t* element, const render_context_t* contex
 
     plutovg_path_reset(context->document->path);
     parse_points(element, ATTR_POINTS, context->document->path);
-    plutovg_path_extents(context->document->path, &new_state.extents);
+    plutovg_path_extents(context->document->path, &new_state.extents, false);
     draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
@@ -2282,7 +2282,7 @@ static void render_path(const element_t* element, const render_context_t* contex
 
     plutovg_path_reset(context->document->path);
     parse_path(element, ATTR_D, context->document->path);
-    plutovg_path_extents(context->document->path, &new_state.extents);
+    plutovg_path_extents(context->document->path, &new_state.extents, false);
     draw_shape(element, context, &new_state);
     render_state_end(&new_state);
 }
