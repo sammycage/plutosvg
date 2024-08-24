@@ -1800,8 +1800,6 @@ static bool apply_radial_gradient(render_state_t* state, const render_context_t*
     if(attributes.cx == NULL) attributes.cx = element;
     if(attributes.cy == NULL) attributes.cy = element;
     if(attributes.r == NULL) attributes.r = element;
-    if(attributes.fx == NULL) attributes.fx = attributes.cx;
-    if(attributes.fy == NULL) attributes.fy = attributes.cy;
 
     units_type_t units = units_type_object_bounding_box;
     plutovg_spread_method_t spread = PLUTOVG_SPREAD_METHOD_PAD;
@@ -1818,8 +1816,18 @@ static bool apply_radial_gradient(render_state_t* state, const render_context_t*
     parse_length(attributes.cx, ATTR_CX, &cx, true, false);
     parse_length(attributes.cy, ATTR_CY, &cy, true, false);
     parse_length(attributes.r, ATTR_R, &r, false, false);
-    parse_length(attributes.fx, ATTR_FX, &fx, true, false);
-    parse_length(attributes.fy, ATTR_FY, &fy, true, false);
+
+    if(attributes.fx) {
+        parse_length(attributes.fx, ATTR_FX, &fx, true, false);
+    } else {
+        parse_length(attributes.cx, ATTR_CX, &fx, true, false);
+    }
+
+    if(attributes.fy) {
+        parse_length(attributes.fy, ATTR_FY, &fy, true, false);
+    } else {
+        parse_length(attributes.cy, ATTR_CY, &fy, true, false);
+    }
 
     float _cx = resolve_gradient_length(state, &cx, units, 'x');
     float _cy = resolve_gradient_length(state, &cy, units, 'y');
