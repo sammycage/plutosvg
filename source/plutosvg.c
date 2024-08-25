@@ -616,27 +616,71 @@ typedef struct {
 #define is_length_valid(length) ((length).type != length_type_unknown)
 static bool parse_length_value(const char** begin, const char* end, length_t* length, bool negative)
 {
-    static const float dpi = 96.f;
+    float value = 0;
     const char* it = *begin;
-    if(!parse_float(&it, end, &length->value))
+    if(!parse_float(&it, end, &value))
         return false;
-    if(!negative && length->value < 0.f)
+    if(!negative && value < 0.f) {
         return false;
-    length->type = length_type_fixed;
-    if(skip_delim(&it, end, '%'))
+    }
+
+    char units[2] = {0, 0};
+    if(it + 0 < end)
+        units[0] = it[0];
+    if(it + 1 < end) {
+        units[1] = it[1];
+    }
+
+    static const float dpi = 96.f;
+    switch(units[0]) {
+    case '%':
+        length->value = value;
         length->type = length_type_percent;
-    else if(skip_string(&it, end, "pt"))
-        length->value = length->value * dpi / 72.f;
-    else if(skip_string(&it, end, "pc"))
-        length->value = length->value * dpi / 6.f;
-    else if(skip_string(&it, end, "in"))
-        length->value = length->value * dpi;
-    else if(skip_string(&it, end, "cm"))
-        length->value = length->value * dpi / 2.54f;
-    else if(skip_string(&it, end, "mm"))
-        length->value = length->value * dpi / 25.4f;
+        it += 1;
+        break;
+    case 'p':
+        if(units[1] == 'x')
+            length->value = value;
+        else if(units[1] == 'c')
+            length->value = value * dpi / 6.f;
+        else if(units[1] == 't')
+            length->value = value * dpi / 72.f;
+        else
+            return false;
+        length->type = length_type_fixed;
+        it += 2;
+        break;
+    case 'i':
+        if(units[1] == 'n')
+            length->value = value * dpi;
+        else
+            return false;
+        length->type = length_type_fixed;
+        it += 2;
+        break;
+    case 'c':
+        if(units[1] == 'm')
+            length->value = value * dpi / 2.54f;
+        else
+            return false;
+        length->type = length_type_fixed;
+        it += 2;
+        break;
+    case 'm':
+        if(units[1] == 'm')
+            length->value = value * dpi / 25.4f;
+        else
+            return false;
+        length->type = length_type_fixed;
+        it += 2;
+        break;
+    default:
+        length->value = value;
+        length->type = length_type_fixed;
+        break;
+    }
+
     *begin = it;
-    skip_ws(begin, end);
     return true;
 }
 
