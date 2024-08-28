@@ -44,6 +44,14 @@ if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(plutosvg PUBLIC PLUTOSVG_BUILD_STATIC)
 endif()
 
+option(PLUTOSVG_ENABLE_FREETYPE "Enables freetype integration" OFF)
+if(PLUTOSVG_ENABLE_FREETYPE)
+    find_package(Freetype 2.12 REQUIRED)
+    target_compile_definitions(plutosvg PUBLIC PLUTOSVG_HAS_FREETYPE)
+    target_include_directories(plutosvg PUBLIC ${FREETYPE_INCLUDE_DIRS})
+    target_link_libraries(plutosvg PRIVATE ${FREETYPE_LIBRARY})
+endif()
+
 include(GNUInstallDirs)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/plutosvg)
 
