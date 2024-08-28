@@ -64,12 +64,23 @@ int main(void)
 
 ## Installation
 
-Ensure you have [Meson](http://mesonbuild.com) and [Ninja](http://ninja-build.org) installed.
+Follow the steps below to install PlutoSVG using either [Meson](https://mesonbuild.com/) or [CMake](https://cmake.org/).
+
+### Using Meson
 
 ```bash
 git clone https://github.com/sammycage/plutosvg.git
-cd plutovg
+cd plutosvg
 meson setup build
-ninja -C build
 ninja -C build install
+```
+
+### Using CMake
+
+```bash
+git clone --recursive https://github.com/sammycage/plutosvg.git
+cd plutosvg
+cmake -B build .
+make -C build -j2
+make -C build install
 ```
