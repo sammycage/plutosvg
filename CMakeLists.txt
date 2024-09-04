@@ -11,13 +11,8 @@ if(NOT plutovg_FOUND)
     add_subdirectory(plutovg)
 endif()
 
-set(plutosvg_sources
-    source/plutosvg.c
-)
-
-set(plutosvg_headers
-    source/plutosvg.h
-)
+set(plutosvg_sources source/plutosvg.c)
+set(plutosvg_headers source/plutosvg.h)
 
 add_library(plutosvg ${plutosvg_sources} ${plutosvg_headers})
 add_library(plutosvg::plutosvg ALIAS plutosvg)
@@ -30,7 +25,7 @@ set_target_properties(plutosvg PROPERTIES
 )
 
 target_include_directories(plutosvg PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
 )
 
 target_include_directories(plutosvg PUBLIC
@@ -52,9 +47,6 @@ if(PLUTOSVG_ENABLE_FREETYPE)
     target_link_libraries(plutosvg PRIVATE ${FREETYPE_LIBRARIES})
 endif()
 
-include(GNUInstallDirs)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/plutosvg)
-
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/plutosvgConfig.cmake.in"
@@ -67,6 +59,12 @@ write_basic_package_version_file(plutosvgConfigVersion.cmake
     COMPATIBILITY SameMajorVersion
 )
 
+include(GNUInstallDirs)
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/plutosvg
+)
+
 install(TARGETS plutosvg
     EXPORT plutosvgTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -76,8 +74,8 @@ install(TARGETS plutosvg
 
 install(EXPORT plutosvgTargets
     FILE plutosvgTargets.cmake
-    NAMESPACE plutosvg::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/plutosvg
+    NAMESPACE plutosvg::
 )
 
 install(FILES
