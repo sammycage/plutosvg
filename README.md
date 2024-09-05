@@ -78,7 +78,7 @@ ninja -C build install
 ### Using CMake
 
 ```bash
-git clone --recursive https://github.com/sammycage/plutosvg.git
+git clone https://github.com/sammycage/plutosvg.git
 cd plutosvg
 cmake -B build .
 make -C build -j2

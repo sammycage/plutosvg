@@ -6,10 +6,15 @@ set(PLUTOSVG_VERSION_MICRO 1)
 
 project(plutosvg LANGUAGES C VERSION ${PLUTOSVG_VERSION_MAJOR}.${PLUTOSVG_VERSION_MINOR}.${PLUTOSVG_VERSION_MICRO})
 
-find_package(plutovg 0.0.1 QUIET)
-if(NOT plutovg_FOUND)
-    add_subdirectory(plutovg)
-endif()
+include(FetchContent)
+FetchContent_Declare(plutovg
+    GIT_REPOSITORY https://github.com/sammycage/plutovg.git
+    GIT_TAG v0.0.2
+    GIT_SHALLOW ON
+    FIND_PACKAGE_ARGS 0.0.2
+)
+
+FetchContent_MakeAvailable(plutovg)
 
 set(plutosvg_sources source/plutosvg.c)
 set(plutosvg_headers source/plutosvg.h)
