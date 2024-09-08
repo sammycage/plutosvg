@@ -9,9 +9,9 @@ project(plutosvg LANGUAGES C VERSION ${PLUTOSVG_VERSION_MAJOR}.${PLUTOSVG_VERSIO
 include(FetchContent)
 FetchContent_Declare(plutovg
     GIT_REPOSITORY https://github.com/sammycage/plutovg.git
-    GIT_TAG v0.0.2
+    GIT_TAG v0.0.3
     GIT_SHALLOW ON
-    FIND_PACKAGE_ARGS 0.0.2
+    FIND_PACKAGE_ARGS 0.0.3
 )
 
 FetchContent_MakeAvailable(plutovg)

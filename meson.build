@@ -10,7 +10,7 @@ plutosvg_compile_args = []
 
 plutovg_dep = dependency('plutovg',
     required: true,
-    version: '>=0.0.2',
+    version: '>=0.0.3',
     fallback: ['plutovg', 'plutovg_dep']
 )
 
