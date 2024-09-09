@@ -16,13 +16,17 @@ plutovg_dep = dependency('plutovg',
 
 plutosvg_deps += [plutovg_dep]
 
+cc = meson.get_compiler('c')
+math_dep = cc.find_library('m', required: false)
+if math_dep.found()
+    plutosvg_deps += [math_dep]
+endif
+
 freetype_dep = dependency('freetype2',
     required: get_option('freetype'),
     version: '>=2.12',
     allow_fallback: false
 )
-
-cc = meson.get_compiler('c')
 
 if freetype_dep.found() and cc.has_type('SVG_RendererHooks', dependencies: freetype_dep, prefix: '#include <freetype/otsvg.h>')
     plutosvg_deps += [freetype_dep]
@@ -41,7 +45,6 @@ plutosvg_lib = library('plutosvg', 'source/plutosvg.c',
     version: meson.project_version(),
     c_args: ['-DPLUTOSVG_BUILD'] + plutosvg_compile_args,
     cpp_args: ['-DPLUTOSVG_BUILD'] + plutosvg_compile_args,
-    link_args: ['-lm'],
     gnu_symbol_visibility: 'hidden',
     install: true
 )
