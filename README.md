@@ -72,7 +72,8 @@ Follow the steps below to install PlutoSVG using either [Meson](https://mesonbui
 git clone https://github.com/sammycage/plutosvg.git
 cd plutosvg
 meson setup build
-ninja -C build install
+meson compile -C build
+meson install -C build
 ```
 
 ### Using CMake
@@ -81,6 +82,6 @@ ninja -C build install
 git clone https://github.com/sammycage/plutosvg.git
 cd plutosvg
 cmake -B build .
-make -C build -j2
-make -C build install
+cmake --build build
+cmake --install build
 ```
