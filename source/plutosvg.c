@@ -91,7 +91,7 @@ enum {
 
 #define MAX_NAME 20
 typedef struct {
-    const char name[MAX_NAME];
+    char name[MAX_NAME];
     int id;
 } name_entry_t;
 
