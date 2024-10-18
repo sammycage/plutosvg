@@ -39,6 +39,12 @@ target_include_directories(plutosvg PUBLIC
 )
 
 target_link_libraries(plutosvg PUBLIC plutovg::plutovg)
+
+find_library(MATH_LIBRARY m)
+if(MATH_LIBRARY)
+    target_link_libraries(plutosvg PRIVATE ${MATH_LIBRARY})
+endif()
+
 target_compile_definitions(plutosvg PRIVATE PLUTOSVG_BUILD)
 if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(plutosvg PUBLIC PLUTOSVG_BUILD_STATIC)
