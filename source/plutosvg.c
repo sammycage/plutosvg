@@ -2467,9 +2467,8 @@ static void draw_image(const element_t* element, const render_context_t* context
     plutovg_canvas_set_opacity(context->canvas, state->opacity);
     plutovg_canvas_set_matrix(context->canvas, &state->matrix);
     plutovg_canvas_translate(context->canvas, dst_rect.x, dst_rect.y);
-    plutovg_canvas_clip_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
     plutovg_canvas_set_texture(context->canvas, image, PLUTOVG_TEXTURE_TYPE_PLAIN, 1, &matrix);
-    plutovg_canvas_paint(context->canvas);
+    plutovg_canvas_fill_rect(context->canvas, 0, 0, dst_rect.w, dst_rect.h);
     plutovg_surface_destroy(image);
 }
 
