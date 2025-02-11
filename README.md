@@ -79,7 +79,7 @@ meson install -C build
 ### Using CMake
 
 ```bash
-git clone https://github.com/sammycage/plutosvg.git
+git clone --recursive https://github.com/sammycage/plutosvg.git
 cd plutosvg
 cmake -B build .
 cmake --build build
