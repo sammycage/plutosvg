@@ -174,6 +174,8 @@ PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document,
 PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 
 /**
+ * @deprecated Use `plutosvg_ft_hooks` in "plutosvg-ft.h" instead.
+ *
  * @brief Retrieves PlutoSVG hooks for integrating with FreeType's SVG module.
  *
  * Provides hooks that allow FreeType to use PlutoSVG for rendering SVG graphics in fonts.

@@ -32,7 +32,7 @@ int main(void)
 ## Integrating with FreeType
 
 ```c
-#include <plutosvg.h>
+#include <plutosvg-ft.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -49,7 +49,7 @@ int main(void)
     }
 
     // Set PlutoSVG hooks for the SVG module
-    if(FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())) {
+    if(FT_Property_Set(library, "ot-svg", "svg-hooks", &plutosvg_ft_hooks)) {
         // Handle error
         return -1;
     }

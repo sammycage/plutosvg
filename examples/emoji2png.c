@@ -1,4 +1,4 @@
-#include <plutosvg.h>
+#include <plutosvg-ft.h>
 
 #include <stdio.h>
 
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 
     if((error = FT_Init_FreeType(&library)))
         goto cleanup;
-    if((error = FT_Property_Set(library, "ot-svg", "svg-hooks", plutosvg_ft_svg_hooks())))
+    if((error = FT_Property_Set(library, "ot-svg", "svg-hooks", &plutosvg_ft_hooks)))
         goto cleanup;
     if((error = FT_New_Face(library, filename, 0, &face)))
         goto cleanup;

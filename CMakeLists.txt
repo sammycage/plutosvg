@@ -16,8 +16,11 @@ FetchContent_Declare(plutovg
 
 FetchContent_MakeAvailable(plutovg)
 
-set(plutosvg_sources source/plutosvg.c)
-set(plutosvg_headers source/plutosvg.h)
+set(plutosvg_sources
+    source/plutosvg.h
+    source/plutosvg-ft.h
+    source/plutosvg.c
+)
 
 add_library(plutosvg ${plutosvg_sources} ${plutosvg_headers})
 add_library(plutosvg::plutosvg ALIAS plutosvg)
@@ -42,7 +45,7 @@ target_link_libraries(plutosvg PUBLIC plutovg::plutovg)
 
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
-    target_link_libraries(plutosvg PRIVATE ${MATH_LIBRARY})
+    target_link_libraries(plutosvg PUBLIC ${MATH_LIBRARY})
 endif()
 
 target_compile_definitions(plutosvg PRIVATE PLUTOSVG_BUILD)
@@ -55,7 +58,7 @@ if(PLUTOSVG_ENABLE_FREETYPE)
     find_package(Freetype 2.12 REQUIRED)
     target_compile_definitions(plutosvg PUBLIC PLUTOSVG_HAS_FREETYPE)
     target_include_directories(plutosvg PUBLIC ${FREETYPE_INCLUDE_DIRS})
-    target_link_libraries(plutosvg PRIVATE ${FREETYPE_LIBRARIES})
+    target_link_libraries(plutosvg PUBLIC ${FREETYPE_LIBRARIES})
 endif()
 
 include(CMakePackageConfigHelpers)
@@ -73,6 +76,7 @@ write_basic_package_version_file(plutosvgConfigVersion.cmake
 include(GNUInstallDirs)
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg-ft.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/plutosvg
 )
 
