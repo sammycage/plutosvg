@@ -22,7 +22,7 @@ set(plutosvg_sources
     source/plutosvg.c
 )
 
-add_library(plutosvg ${plutosvg_sources} ${plutosvg_headers})
+add_library(plutosvg ${plutosvg_sources})
 add_library(plutosvg::plutosvg ALIAS plutosvg)
 
 set_target_properties(plutosvg PROPERTIES

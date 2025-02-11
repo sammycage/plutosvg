@@ -20,10 +20,45 @@
  * SOFTWARE.
 */
 
+/**
+ * @brief FreeType hooks for rendering SVG glyphs with PlutoSVG.
+ *
+ * This file implements the integration layer between FreeType’s SVG module (typically
+ * named "ot-svg") and PlutoSVG. It defines the necessary functions to initialize and
+ * free the SVG rendering state, render an SVG glyph into a glyph slot, load (and cache)
+ * SVG documents, and pre-configure glyph slots with appropriate metrics and transforms.
+ *
+ * The functions are aggregated into the `plutosvg_ft_hooks` structure.
+ *
+ * Usage example:
+ * @code
+ * #include <plutosvg-ft.h>
+ *
+ * #include <ft2build.h>
+ * #include FT_FREETYPE_H
+ * #include FT_MODULE_H
+ *
+ * int main(void)
+ * {
+ *     FT_Library library;
+ *     if (FT_Init_FreeType(&library))
+ *         return -1;
+ *
+ *     if (FT_Property_Set(library, "ot-svg", "svg-hooks", &plutosvg_ft_hooks))
+ *         return -1;
+ *
+ *     // ... your code ...
+ *
+ *     FT_Done_FreeType(library);
+ *     return 0;
+ * }
+ * @endcode
+ */
+
 #ifndef PLUTOSVG_FT_H
 #define PLUTOSVG_FT_H
 
-#include <plutosvg.h>
+#include "plutosvg.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -205,6 +240,12 @@ static FT_Error plutosvg_ft_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, 
     return FT_Err_Ok;
 }
 
+/**
+ * @brief FreeType SVG renderer hooks.
+ *
+ * This structure is passed to FreeType via FT_Property_Set to delegate SVG glyph
+ * rendering to PlutoSVG.
+ */
 static SVG_RendererHooks plutosvg_ft_hooks = {
     (SVG_Lib_Init_Func)plutosvg_ft_init,
     (SVG_Lib_Free_Func)plutosvg_ft_free,
