@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2024 Samuel Ugochukwu <sammycageagle@gmail.com>
+ * Copyright (c) 2020-2025 Samuel Ugochukwu <sammycageagle@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@
  * free the SVG rendering state, render an SVG glyph into a glyph slot, load (and cache)
  * SVG documents, and pre-configure glyph slots with appropriate metrics and transforms.
  *
- * The functions are aggregated into the `plutosvg_ft_hooks` structure.
+ * These functions are aggregated into the `plutosvg_ft_hooks` structure.
  *
  * Usage example:
  * @code
@@ -110,15 +110,16 @@ static FT_Error plutosvg_ft_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
     FT_UShort start_glyph_id = ft_document->start_glyph_id;
     FT_UShort end_glyph_id = ft_document->end_glyph_id;
 
+    char buffer[64];
+    char* id = NULL;
+    if(start_glyph_id < end_glyph_id) {
+        sprintf(buffer, "glyph%u", ft_slot->glyph_index);
+        id = buffer;
+    }
+
     plutovg_canvas_translate(canvas, -state->extents.x, -state->extents.y);
     plutovg_canvas_transform(canvas, &state->matrix);
-    if(start_glyph_id < end_glyph_id) {
-        char id[64];
-        sprintf(id, "glyph%u", ft_slot->glyph_index);
-        plutosvg_document_render(state->document, id, canvas, NULL, NULL, NULL);
-    } else {
-        plutosvg_document_render(state->document, NULL, canvas, NULL, NULL, NULL);
-    }
+    plutosvg_document_render(state->document, id, canvas, NULL, NULL, NULL);
 
     ft_slot->bitmap.pixel_mode = FT_PIXEL_MODE_BGRA;
     ft_slot->bitmap.num_grays = 256;
@@ -126,14 +127,14 @@ static FT_Error plutosvg_ft_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 
     plutovg_canvas_destroy(canvas);
     plutovg_surface_destroy(surface);
+    state->document = NULL;
     return FT_Err_Ok;
 }
 
 static plutosvg_document_t* plutosvg_ft_document_load(plutosvg_ft_state_t* state, const FT_Byte* data, FT_ULong length, FT_UShort units_per_EM)
 {
     for(FT_ULong i = 0; i < state->num_entries; ++i) {
-        if(data == state->entries[i].data
-            && length == state->entries[i].length) {
+        if(data == state->entries[i].data && length == state->entries[i].length) {
             plutosvg_ft_document_entry_t entry = state->entries[i];
             memmove(&state->entries[1], &state->entries[0], i * sizeof(plutosvg_ft_document_entry_t));
             state->entries[0] = entry;
@@ -160,7 +161,6 @@ static plutosvg_document_t* plutosvg_ft_document_load(plutosvg_ft_state_t* state
 static FT_Error plutosvg_ft_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, FT_Pointer* ft_state)
 {
     plutosvg_ft_state_t* state = (plutosvg_ft_state_t*)(*ft_state);
-    state->document = NULL;
 
     FT_SVG_Document ft_document = (FT_SVG_Document)ft_slot->other;
     FT_Size_Metrics ft_metrics = ft_document->metrics;
@@ -177,11 +177,11 @@ static FT_Error plutosvg_ft_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, 
     float document_height = plutosvg_document_get_height(document);
 
     plutovg_matrix_t transform = {
-        (float)ft_document->transform.xx / (1 << 16),
+         (float)ft_document->transform.xx / (1 << 16),
         -(float)ft_document->transform.xy / (1 << 16),
         -(float)ft_document->transform.yx / (1 << 16),
-        (float)ft_document->transform.yy / (1 << 16),
-        (float)ft_document->delta.x / 64 * document_width / ft_metrics.x_ppem,
+         (float)ft_document->transform.yy / (1 << 16),
+         (float)ft_document->delta.x / 64 * document_width / ft_metrics.x_ppem,
         -(float)ft_document->delta.y / 64 * document_height / ft_metrics.y_ppem
     };
 
@@ -193,7 +193,7 @@ static FT_Error plutosvg_ft_preset_slot(FT_GlyphSlot ft_slot, FT_Bool ft_cache, 
     plutovg_matrix_multiply(&matrix, &transform, &matrix);
 
     char buffer[64];
-    const char* id = NULL;
+    char* id = NULL;
     if(start_glyph_id < end_glyph_id) {
         sprintf(buffer, "glyph%u", ft_slot->glyph_index);
         id = buffer;
