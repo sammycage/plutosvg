@@ -66,6 +66,7 @@
 
 #include <ft2build.h>
 #include FT_OTSVG_H
+#include FT_COLOR_H
 
 typedef struct {
     plutosvg_document_t* document;
@@ -98,6 +99,39 @@ static void plutosvg_ft_free(FT_Pointer* ft_state)
     free(state);
 }
 
+#define PLUTOSVG_FT_PALETTE_INDEX 0
+
+static bool plutosvg_ft_palette_func(void* closure, const char* name, int length, plutovg_color_t* color)
+{
+    FT_Face ft_face = (FT_Face)(closure);
+    if(length < 5 || strncmp(name, "color", 5) != 0)
+        return false;
+    FT_Palette_Data ft_palette_data;
+    if(FT_Palette_Data_Get(ft_face, &ft_palette_data))
+        return false;
+    FT_Color* ft_palette = NULL;
+    if(FT_Palette_Select(ft_face, PLUTOSVG_FT_PALETTE_INDEX, &ft_palette)) {
+        return false;
+    }
+
+    FT_Int index = 0;
+    for(int i = 5; i < length; ++i) {
+        const char ch = name[i];
+        if(ch < '0' || ch > '9')
+            return false;
+        index = index * 10 + ch - '0';
+    }
+
+    if(index >= ft_palette_data.num_palettes)
+        return false;
+    FT_Color* ft_color = ft_palette + index;
+    color->r = ft_color->red / 255.f;
+    color->g = ft_color->green / 255.f;
+    color->b = ft_color->blue / 255.f;
+    color->a = ft_color->alpha / 255.f;
+    return true;
+}
+
 static FT_Error plutosvg_ft_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 {
     plutosvg_ft_state_t* state = (plutosvg_ft_state_t*)(*ft_state);
@@ -119,7 +153,7 @@ static FT_Error plutosvg_ft_render(FT_GlyphSlot ft_slot, FT_Pointer* ft_state)
 
     plutovg_canvas_translate(canvas, -state->extents.x, -state->extents.y);
     plutovg_canvas_transform(canvas, &state->matrix);
-    plutosvg_document_render(state->document, id, canvas, NULL, NULL, NULL);
+    plutosvg_document_render(state->document, id, canvas, NULL, plutosvg_ft_palette_func, ft_slot->face);
 
     ft_slot->bitmap.pixel_mode = FT_PIXEL_MODE_BGRA;
     ft_slot->bitmap.num_grays = 256;
