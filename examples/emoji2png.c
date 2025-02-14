@@ -33,11 +33,12 @@ int main(int argc, char* argv[])
         goto cleanup;
     }
 
-    FT_GlyphSlot slot = face->glyph;
-    if(slot->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+    if(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+        FT_Bitmap* bitmap = &face->glyph->bitmap;
+        plutovg_surface_t* surface = plutovg_surface_create_for_data(bitmap->buffer, bitmap->width, bitmap->rows, bitmap->pitch);
+
         char name[64];
         sprintf(name, "emoji-%lx.png", codepoint);
-        plutovg_surface_t* surface = plutovg_surface_create_for_data(slot->bitmap.buffer, slot->bitmap.width, slot->bitmap.rows, slot->bitmap.pitch);
         plutovg_surface_write_to_png(surface, name);
         plutovg_surface_destroy(surface);
         fprintf(stdout, "Generated Emoji: %s\n", name);

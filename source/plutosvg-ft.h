@@ -75,6 +75,7 @@ typedef struct {
 } plutosvg_ft_document_entry_t;
 
 #define PLUTOSVG_FT_MAX_DOCS 16
+
 typedef struct {
     plutosvg_document_t* document;
     plutovg_matrix_t matrix;
@@ -122,7 +123,7 @@ static bool plutosvg_ft_palette_func(void* closure, const char* name, int length
         index = index * 10 + ch - '0';
     }
 
-    if(index >= ft_palette_data.num_palettes)
+    if(index >= ft_palette_data.num_palette_entries)
         return false;
     FT_Color* ft_color = ft_palette + index;
     color->r = ft_color->red / 255.f;
