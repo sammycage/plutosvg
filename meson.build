@@ -57,7 +57,7 @@ plutosvg_dep = declare_dependency(
 )
 
 meson.override_dependency('plutosvg', plutosvg_dep)
-install_headers('source/plutosvg.h', subdir: 'plutosvg')
+install_headers('source/plutosvg.h', 'source/plutosvg-ft.h', subdir: 'plutosvg')
 
 if not get_option('examples').disabled()
     subdir('examples')
