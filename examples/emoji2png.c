@@ -34,8 +34,10 @@ int main(int argc, char* argv[])
     }
 
     if(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
-        FT_Bitmap* bitmap = &face->glyph->bitmap;
-        plutovg_surface_t* surface = plutovg_surface_create_for_data(bitmap->buffer, bitmap->width, bitmap->rows, bitmap->pitch);
+        plutovg_surface_t* surface = plutovg_surface_create_for_data(
+            face->glyph->bitmap.buffer, face->glyph->bitmap.width,
+            face->glyph->bitmap.rows, face->glyph->bitmap.pitch
+        );
 
         char name[64];
         sprintf(name, "emoji-%lx.png", codepoint);

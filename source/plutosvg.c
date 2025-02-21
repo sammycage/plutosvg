@@ -104,9 +104,9 @@ static int name_entry_compare(const void* a, const void* b)
 
 static int lookupid(const char* data, size_t length, const name_entry_t* table, size_t count)
 {
-    if(length >= MAX_NAME)
+    if(length > MAX_NAME)
         return 0;
-    char name[MAX_NAME];
+    char name[MAX_NAME + 1];
     for(int i = 0; i < length; i++)
         name[i] = data[i];
     name[length] = '\0';
@@ -447,8 +447,8 @@ static inline bool has_attribute(const element_t* element, int id)
 static inline bool parse_float(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;
-    float fraction = 0;
     float integer = 0;
+    float fraction = 0;
     float exponent = 0;
     int sign = 1;
     int expsign = 1;
@@ -511,7 +511,7 @@ static inline bool skip_string(const char** begin, const char* end, const char* 
         ++it;
     }
 
-    if(*data == 0) {
+    if(*data == '\0') {
         *begin = it;
         return true;
     }
@@ -519,7 +519,7 @@ static inline bool skip_string(const char** begin, const char* end, const char* 
     return false;
 }
 
-static const char* string_find(const char* it, const char* end, const char* data)
+static inline const char* string_find(const char* it, const char* end, const char* data)
 {
     while(it < end) {
         const char* begin = it;
@@ -612,7 +612,6 @@ typedef struct {
 } length_t;
 
 #define is_length_zero(length) ((length).value == 0)
-#define is_length_fixed(length) ((length).type == length_type_percent)
 #define is_length_valid(length) ((length).type != length_type_unknown)
 static bool parse_length_value(const char** begin, const char* end, length_t* length, bool negative)
 {
@@ -1279,7 +1278,7 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
             if(!skip_string(&it, end, "xml"))
                 goto error;
             skip_ws(&it, end);
-            if(!parse_attributes(&it, end, NULL, document))
+            if(!parse_attributes(&it, end, NULL, NULL))
                 goto error;
             if(!skip_string(&it, end, "?>"))
                 goto error;
@@ -1428,7 +1427,7 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
         float intrinsic_width = convert_length(&w, width);
         float intrinsic_height = convert_length(&h, height);
         if(intrinsic_width <= 0.f || intrinsic_height <= 0.f) {
-            plutovg_rect_t view_box = {0};
+            plutovg_rect_t view_box = {0, 0, 0, 0};
             if(parse_view_box(document->root_element, ATTR_VIEW_BOX, &view_box)) {
                 float intrinsic_ratio = view_box.w / view_box.h;
                 if(intrinsic_width <= 0.f && intrinsic_height > 0.f) {
@@ -1701,14 +1700,11 @@ static void collect_gradient_attributes(const element_t* element, gradient_attri
     if(attributes->transform == NULL && has_attribute(element, ATTR_GRADIENT_TRANSFORM))
         attributes->transform = element;
     if(attributes->stops == NULL) {
-        const element_t* child = element->first_child;
-        while(child) {
+        for(const element_t* child = element->first_child; child; child = child->next_sibling) {
             if(child->id == TAG_STOP) {
                 attributes->stops = element;
                 break;
             }
-
-            child = child->next_sibling;
         }
     }
 }
@@ -1895,7 +1891,7 @@ static bool apply_paint(render_state_t* state, const render_context_t* context, 
 
     if(paint->type == paint_type_var) {
         plutovg_color_t color;
-        if(context->palette_func == NULL || !context->palette_func(context->closure, paint->id.data, paint->id.length, &color))
+        if(!context->palette_func || !context->palette_func(context->closure, paint->id.data, paint->id.length, &color))
             color = resolve_color(context, state->element, &paint->color);
         plutovg_canvas_set_color(context->canvas, &color);
         return true;
@@ -2613,7 +2609,7 @@ float plutosvg_document_get_width(const plutosvg_document_t* document)
     return document->width;
 }
 
-float plutosvg_document_get_height(const plutosvg_document_t *document)
+float plutosvg_document_get_height(const plutosvg_document_t* document)
 {
     return document->height;
 }
