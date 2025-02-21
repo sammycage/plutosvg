@@ -975,6 +975,8 @@ static bool parse_points(const element_t* element, int id, plutovg_path_t* path)
         requires_move = false;
     }
 
+    if(element->id == TAG_POLYGON)
+        plutovg_path_close(path);
     return true;
 }
 
