@@ -491,9 +491,9 @@ static inline bool parse_float(const char** begin, const char* end, float* numbe
 
         if(it >= end || !IS_NUM(*it))
             return false;
-        while(it < end && IS_NUM(*it)) {
+        do {
             exponent = 10 * exponent + (*it++ - '0');
-        }
+        } while(it < end && IS_NUM(*it));
     }
 
     *begin = it;
@@ -853,10 +853,8 @@ static bool parse_view_box(const element_t* element, int id, plutovg_rect_t* vie
         return false;
     const char* it = value->data;
     const char* end = it + value->length;
-    float x = 0;
-    float y = 0;
-    float w = 0;
-    float h = 0;
+
+    float x, y, w, h;
     if(!parse_float(&it, end, &x)
         || !skip_ws_comma(&it, end)
         || !parse_float(&it, end, &y)
