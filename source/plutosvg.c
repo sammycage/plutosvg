@@ -2124,22 +2124,13 @@ static void render_use(const element_t* element, const render_context_t* context
 
     render_state_t new_state;
     render_state_begin(element, &new_state, state);
+    plutovg_matrix_translate(&new_state.matrix, _x, _y);
 
     const element_t* parent = ref->parent;
     ref->parent = (element_t*)(element);
     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL) {
-        length_t w = {100, length_type_percent};
-        length_t h = {100, length_type_percent};
-
-        parse_length(element, ATTR_WIDTH, &w, false, false);
-        parse_length(element, ATTR_HEIGHT, &h, false, false);
-
-        float _w = resolve_length(state, &w, 'x');
-        float _h = resolve_length(state, &h, 'y');
-
-        render_symbol(ref, context, &new_state, _x, _y, _w, _h);
+        render_svg(ref, context, &new_state);
     } else {
-        plutovg_matrix_translate(&new_state.matrix, _x, _y);
         render_element(ref, context, &new_state);
     }
 
