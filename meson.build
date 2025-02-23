@@ -1,5 +1,5 @@
 project('plutosvg', 'c',
-    version: '0.0.5',
+    version: '0.0.6',
     license: 'MIT',
     meson_version: '>=0.64.0',
     default_options: ['c_std=c99']
@@ -10,7 +10,7 @@ plutosvg_compile_args = []
 
 plutovg_dep = dependency('plutovg',
     required: true,
-    version: '>=0.0.3',
+    version: '>=0.0.4',
     fallback: ['plutovg', 'plutovg_dep']
 )
 
