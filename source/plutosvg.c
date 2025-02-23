@@ -1541,7 +1541,6 @@ static void render_state_end(render_state_t* state)
     if(state->mode == render_mode_painting)
         return;
     if(IS_INVALID_RECT(state->extents)) {
-        state->extents = EMPTY_RECT;
         return;
     }
 
