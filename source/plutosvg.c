@@ -41,8 +41,8 @@ enum {
 enum {
     ATTR_UNKNOWN = 0,
     ATTR_CLIP_PATH,
-    ATTR_CLIP_RULE,
     ATTR_CLIP_PATH_UNITS,
+    ATTR_CLIP_RULE,
     ATTR_COLOR,
     ATTR_CX,
     ATTR_CY,
@@ -56,6 +56,7 @@ enum {
     ATTR_GRADIENT_TRANSFORM,
     ATTR_GRADIENT_UNITS,
     ATTR_HEIGHT,
+    ATTR_HREF,
     ATTR_ID,
     ATTR_OFFSET,
     ATTR_OPACITY,
@@ -83,7 +84,6 @@ enum {
     ATTR_X,
     ATTR_X1,
     ATTR_X2,
-    ATTR_XLINK_HREF,
     ATTR_Y,
     ATTR_Y1,
     ATTR_Y2
@@ -161,6 +161,7 @@ static int attributeid(const char* data, size_t length)
         {"gradientTransform", ATTR_GRADIENT_TRANSFORM},
         {"gradientUnits", ATTR_GRADIENT_UNITS},
         {"height", ATTR_HEIGHT},
+        {"href", ATTR_HREF},
         {"id", ATTR_ID},
         {"offset", ATTR_OFFSET},
         {"opacity", ATTR_OPACITY},
@@ -188,7 +189,7 @@ static int attributeid(const char* data, size_t length)
         {"x", ATTR_X},
         {"x1", ATTR_X1},
         {"x2", ATTR_X2},
-        {"xlink:href", ATTR_XLINK_HREF},
+        {"xlink:href", ATTR_HREF},
         {"y", ATTR_Y},
         {"y1", ATTR_Y1},
         {"y2", ATTR_Y2}
@@ -1609,7 +1610,7 @@ static element_t* find_element(const plutosvg_document_t* document, const string
 
 static element_t* resolve_href(const plutosvg_document_t* document, const element_t* element)
 {
-    const string_t* value = find_attribute(element, ATTR_XLINK_HREF, false);
+    const string_t* value = find_attribute(element, ATTR_HREF, false);
     if(value && value->length > 1 && value->data[0] == '#') {
         string_t id = {value->data + 1, value->length - 1};
         return find_element(document, &id);
@@ -2412,7 +2413,7 @@ static void transform_view_rect(const view_position_t* position, plutovg_rect_t*
 
 static plutovg_surface_t* load_image(const element_t* element)
 {
-    const string_t* value = find_attribute(element, ATTR_XLINK_HREF, false);
+    const string_t* value = find_attribute(element, ATTR_HREF, false);
     if(value == NULL)
         return false;
     const char* it = value->data;
