@@ -89,9 +89,9 @@ enum {
     ATTR_Y2
 };
 
-#define MAX_NAME 20
+#define MAX_NAME 19
 typedef struct {
-    char name[MAX_NAME];
+    const char* name;
     int id;
 } name_entry_t;
 
