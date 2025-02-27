@@ -315,7 +315,7 @@ static hashmap_t* hashmap_create(void)
 static size_t hashmap_hash(const char* data, size_t length)
 {
     size_t h = length;
-    for(int i = 0; i < length; i++) {
+    for(size_t i = 0; i < length; i++) {
         h = h * 31 + *data;
         ++data;
     }
@@ -328,7 +328,7 @@ static bool hashmap_eq(const hashmap_entry_t* entry, const char* data, size_t le
     const string_t* name = &entry->name;
     if(name->length != length)
         return false;
-    for(int i = 0; i < length; i++) {
+    for(size_t i = 0; i < length; i++) {
         if(data[i] != name->data[i]) {
             return false;
         }
@@ -342,7 +342,7 @@ static void hashmap_expand(hashmap_t* map)
     if(map->size > (map->capacity * 3 / 4)) {
         size_t newcapacity = map->capacity << 1;
         hashmap_entry_t** newbuckets = calloc(newcapacity, sizeof(hashmap_entry_t*));
-        for(int i = 0; i < map->capacity; i++) {
+        for(size_t i = 0; i < map->capacity; i++) {
             hashmap_entry_t* entry = map->buckets[i];
             while(entry) {
                 hashmap_entry_t* next = entry->next;
