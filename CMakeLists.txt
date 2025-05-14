@@ -40,7 +40,7 @@ target_link_libraries(plutosvg PUBLIC plutovg::plutovg)
 
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
-    target_link_libraries(plutosvg PUBLIC ${MATH_LIBRARY})
+    target_link_libraries(plutosvg PUBLIC m)
 endif()
 
 target_compile_definitions(plutosvg PRIVATE PLUTOSVG_BUILD)
@@ -55,6 +55,8 @@ if(PLUTOSVG_ENABLE_FREETYPE)
     target_link_libraries(plutosvg PUBLIC Freetype::Freetype)
 endif()
 
+include(GNUInstallDirs)
+
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/plutosvgConfig.cmake.in"
@@ -67,7 +69,6 @@ write_basic_package_version_file(plutosvgConfigVersion.cmake
     COMPATIBILITY SameMajorVersion
 )
 
-include(GNUInstallDirs)
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg.h
     ${CMAKE_CURRENT_SOURCE_DIR}/source/plutosvg-ft.h
