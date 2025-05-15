@@ -99,6 +99,35 @@ export(EXPORT plutosvgTargets
     NAMESPACE plutosvg::
 )
 
+file(RELATIVE_PATH pc_prefix_relative "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/pkgconfig" "${CMAKE_INSTALL_PREFIX}")
+set(pc_cflags "")
+set(pc_libs_private "")
+set(pc_requires "")
+if(MATH_LIBRARY)
+    string(APPEND pc_libs_private " -lm")
+endif()
+if(PLUTOSVG_ENABLE_FREETYPE)
+    string(APPEND pc_cflags " -DPLUTOSVG_HAS_FREETYPE")
+    string(APPEND pc_requires " freetype2 >= 2.12")
+endif()
+string(CONFIGURE [[
+prefix=${pcfiledir}/@pc_prefix_relative@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+
+Name: PlutoSVG
+Description: Tiny 2D vector graphics library in C
+Version: @PROJECT_VERSION@
+
+Requires:@pc_requires@
+Requires.private: plutovg
+Cflags: "-I${includedir}/plutosvg"@pc_cflags@
+Libs: "-L${libdir}" -lplutosvg
+Libs.private:@pc_libs_private@
+]] pkgconfig @ONLY)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/plutosvg.pc" "${pkgconfig}")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/plutosvg.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+
 option(PLUTOSVG_BUILD_EXAMPLES "Build examples" ON)
 if(PLUTOSVG_BUILD_EXAMPLES)
     add_subdirectory(examples)
