@@ -25,7 +25,10 @@
 
 #include <plutovg.h>
 
-#if !defined(PLUTOSVG_BUILD_STATIC) && (defined(_WIN32) || defined(__CYGWIN__))
+#if defined(PLUTOSVG_BUILD_STATIC)
+#define PLUTOSVG_EXPORT
+#define PLUTOSVG_IMPORT
+#elif (defined(_WIN32) || defined(__CYGWIN__))
 #define PLUTOSVG_EXPORT __declspec(dllexport)
 #define PLUTOSVG_IMPORT __declspec(dllimport)
 #elif defined(__GNUC__) && (__GNUC__ >= 4)
