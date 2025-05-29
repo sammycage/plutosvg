@@ -85,3 +85,11 @@ cmake -B build .
 cmake --build build
 cmake --install build
 ```
+
+### Projects Using PlutoSVG
+
+- [PumpkinOS](https://github.com/migueletto/PumpkinOS)
+- [Shell](https://github.com/moudey/Shell)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [SDL_ttf](https://github.com/libsdl-org/SDL_ttf)
+- [PCSX2](https://github.com/PCSX2/pcsx2)
