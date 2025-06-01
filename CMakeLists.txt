@@ -33,7 +33,7 @@ target_include_directories(plutosvg PRIVATE
 
 target_include_directories(plutosvg PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/source>
-    $<INSTALL_INTERFACE:include/plutosvg>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/plutosvg>
 )
 
 target_link_libraries(plutosvg PUBLIC plutovg::plutovg)
