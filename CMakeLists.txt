@@ -56,8 +56,8 @@ if(PLUTOSVG_ENABLE_FREETYPE)
 endif()
 
 include(GNUInstallDirs)
-
 include(CMakePackageConfigHelpers)
+
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/plutosvgConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/plutosvgConfig.cmake"

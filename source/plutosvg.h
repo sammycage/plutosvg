@@ -66,38 +66,38 @@ PLUTOSVG_API int plutosvg_version(void);
 /**
  * @brief Returns the version string of PlutoSVG.
  *
- * @return Pointer to a string containing the version information.
+ * @return The version number as a null-terminated string.
  */
 PLUTOSVG_API const char* plutosvg_version_string(void);
 
 /**
- * @brief plutosvg_document_t
+ * @brief Represents an abstract SVG document handle.
  */
 typedef struct plutosvg_document plutosvg_document_t;
 
 /**
  * @brief Callback type for resolving CSS color variables in SVG documents.
  *
- * @param closure User-defined data for the callback.
+ * @param closure User-defined data passed to the callback.
  * @param name Name of the color variable.
  * @param length Length of the color variable name.
- * @param color Pointer to `plutovg_color_t` where the resolved color will be stored.
+ * @param color Pointer to a `plutovg_color_t` object where the resolved color will be stored.
  * @return `true` if the color variable was successfully resolved; `false` otherwise.
  */
-typedef bool(*plutosvg_palette_func_t)(void* closure, const char* name, int length, plutovg_color_t* color);
+typedef bool (*plutosvg_palette_func_t)(void* closure, const char* name, int length, plutovg_color_t* color);
 
 /**
  * @brief Loads an SVG document from a data buffer.
  *
- * @note The buffer pointed to by `data` must remain valid until the `plutosvg_document_t` object is destroyed.
+ * @note The buffer pointed to by `data` must remain valid until the returned `plutosvg_document_t` object is destroyed.
  *
  * @param data Pointer to the SVG data buffer.
  * @param length Length of the data buffer.
- * @param width Container width for resolving the initial viewport.
- * @param height Container height for resolving the initial viewport.
- * @param destroy_func Custom function to call when the document is destroyed.
- * @param closure User-defined data for the `destroy_func` callback.
- * @return Pointer to the loaded `plutosvg_document_t` structure, or NULL if loading fails.
+ * @param width Container width used to resolve the intrinsic width, or `-1` if unspecified.
+ * @param height Container height used to resolve the intrinsic height, or `-1` if unspecified.
+ * @param destroy_func Custom function called when the document is destroyed.
+ * @param closure User-defined data passed to the `destroy_func` callback.
+ * @return Pointer to the loaded `plutosvg_document_t` object, or `NULL` if loading fails.
  */
 PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int length, float width, float height,
     plutovg_destroy_func_t destroy_func, void* closure);
@@ -106,9 +106,9 @@ PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_data(const char* d
  * @brief Loads an SVG document from a file.
  *
  * @param filename Path to the SVG file.
- * @param width Container width for resolving the initial viewport.
- * @param height Container height for resolving the initial viewport.
- * @return Pointer to the loaded `plutosvg_document_t` structure, or NULL if loading fails.
+ * @param width Container width used to resolve the intrinsic width, or `-1` if unspecified.
+ * @param height Container height used to resolve the intrinsic height, or `-1` if unspecified.
+ * @return Pointer to the loaded `plutosvg_document_t` object, or `NULL` if loading fails.
  */
 PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_file(const char* filename, float width, float height);
 
@@ -119,24 +119,24 @@ PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_file(const char* f
  * @param id ID of the SVG element to render, or `NULL` to render the entire document.
  * @param canvas Canvas onto which the SVG element or document will be rendered.
  * @param current_color Color used to resolve CSS `currentColor` values.
- * @param palette_func Callback for resolving CSS color variables.
- * @param closure User-defined data for the `palette_func` callback.
+ * @param palette_func Callback function for resolving CSS color variables.
+ * @param closure User-defined data passed to the `palette_func` callback.
  * @return `true` if rendering was successful; `false` otherwise.
  */
 PLUTOSVG_API bool plutosvg_document_render(const plutosvg_document_t* document, const char* id, plutovg_canvas_t* canvas,
     const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
 
 /**
- * @brief Renders an SVG document or a specific element onto a surface.
+ * @brief Renders an SVG document or a specific element to a surface.
  *
  * @param document Pointer to the SVG document.
  * @param id ID of the SVG element to render, or `NULL` to render the entire document.
- * @param width Width of the surface, or `-1` if unspecified.
- * @param height Height of the surface, or `-1` if unspecified.
- * @param current_color Color for resolving CSS `currentColor` values.
- * @param palette_func Callback for resolving CSS color variables.
- * @param closure User-defined data for the `palette_func` callback.
- * @return Pointer to the rendered `plutovg_surface_t` structure, or `NULL` if rendering fails.
+ * @param width Expected width of the surface, or `-1` if unspecified.
+ * @param height Expected height of the surface, or `-1` if unspecified.
+ * @param current_color Color used to resolve CSS `currentColor` values.
+ * @param palette_func Callback function for resolving CSS color variables.
+ * @param closure User-defined data passed to the `palette_func` callback.
+ * @return Pointer to the rendered `plutovg_surface_t` object, or `NULL` if rendering fails.
  */
 PLUTOSVG_API plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height,
     const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
@@ -160,26 +160,26 @@ PLUTOSVG_API float plutosvg_document_get_height(const plutosvg_document_t* docum
 /**
  * @brief Retrieves the bounding box of a specific element or the entire SVG document.
  *
- * Calculates and retrieves the extents of an element identified by `id` or the whole document if `id` is `NULL`.
+ * Calculates and retrieves the extents of an element identified by `id`, or the whole document if `id` is `NULL`.
  *
  * @param document Pointer to the SVG document.
  * @param id ID of the element whose extents to retrieve, or `NULL` to retrieve the extents of the entire document.
- * @param extents Pointer to a `plutovg_rect_t` structure where the extents will be stored.
- * @return `true` if extents were successfully retrieved; `false` otherwise.
+ * @param extents Pointer to a `plutovg_rect_t` object where the extents will be stored.
+ * @return `true` if the extents were successfully retrieved; `false` otherwise.
  */
 PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document, const char* id, plutovg_rect_t* extents);
 
 /**
  * @brief Destroys an SVG document and frees its resources.
  *
- * @param document Pointer to a `plutosvg_document_t` structure to be destroyed. If `NULL`, the function does nothing.
+ * @param document Pointer to a `plutosvg_document_t` object to be destroyed. If `NULL`, the function does nothing.
  */
 PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 
 /**
- * @deprecated Use `plutosvg_ft_hooks` in "plutosvg-ft.h" instead.
- *
  * @brief Retrieves PlutoSVG hooks for integrating with FreeType's SVG module.
+ *
+ * @note Use `plutosvg_ft_hooks` in "plutosvg-ft.h" instead.
  *
  * Provides hooks that allow FreeType to use PlutoSVG for rendering SVG graphics in fonts.
  *

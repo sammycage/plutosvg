@@ -65,6 +65,7 @@
 #include <math.h>
 
 #include <ft2build.h>
+#include FT_FREETYPE_H
 #include FT_OTSVG_H
 #include FT_COLOR_H
 
