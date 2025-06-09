@@ -20,6 +20,9 @@ set(plutosvg_sources
 add_library(plutosvg ${plutosvg_sources})
 add_library(plutosvg::plutosvg ALIAS plutosvg)
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 set_target_properties(plutosvg PROPERTIES
     SOVERSION ${PLUTOSVG_VERSION_MAJOR}
     C_VISIBILITY_PRESET hidden
@@ -54,9 +57,6 @@ if(PLUTOSVG_ENABLE_FREETYPE)
     target_compile_definitions(plutosvg PUBLIC PLUTOSVG_HAS_FREETYPE)
     target_link_libraries(plutosvg PUBLIC Freetype::Freetype)
 endif()
-
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/plutosvgConfig.cmake.in"
