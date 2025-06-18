@@ -179,7 +179,8 @@ PLUTOSVG_API void plutosvg_document_destroy(plutosvg_document_t* document);
 /**
  * @brief Retrieves PlutoSVG hooks for integrating with FreeType's SVG module.
  *
- * @note Use `plutosvg_ft_hooks` in "plutosvg-ft.h" instead.
+ * @note If you want to manage FreeType integration independently from PlutoSVG,
+ * include <plutosvg-ft.h> and use `plutosvg_ft_hooks` directly instead of this function.
  *
  * Provides hooks that allow FreeType to use PlutoSVG for rendering SVG graphics in fonts.
  *
