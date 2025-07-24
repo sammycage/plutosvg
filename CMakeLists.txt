@@ -107,6 +107,16 @@ file(RELATIVE_PATH plutosvg_pc_prefix_relative
 set(plutosvg_pc_cflags "")
 set(plutosvg_pc_libs_private "")
 set(plutosvg_pc_requires "")
+if(IS_ABSOLUTE "${CMAKE_INSTALL_INCLUDEDIR}")
+    set(plutosvg_pc_includedir "${CMAKE_INSTALL_INCLUDEDIR}")
+else()
+    set(plutosvg_pc_includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
+endif()
+if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+    set(plutosvg_pc_libdir "${CMAKE_INSTALL_LIBDIR}")
+else()
+    set(plutosvg_pc_libdir "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
+endif()
 
 if(MATH_LIBRARY)
     string(APPEND plutosvg_pc_libs_private " -lm")
@@ -123,8 +133,8 @@ endif()
 
 string(CONFIGURE [[
 prefix=${pcfiledir}/@plutosvg_pc_prefix_relative@
-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
-libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=@plutosvg_pc_includedir@
+libdir=@plutosvg_pc_libdir@
 
 Name: PlutoSVG
 Description: Tiny SVG rendering library in C
