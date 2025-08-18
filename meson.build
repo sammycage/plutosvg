@@ -22,6 +22,10 @@ if math_dep.found()
     plutosvg_deps += [math_dep]
 endif
 
+if cc.get_id() == 'msvc' or cc.get_id() == 'clang' or cc.get_id() == 'clang-cl'
+    plutovg_c_args += ['-D_CRT_SECURE_NO_WARNINGS']
+endif
+
 freetype_dep = dependency('freetype2',
     required: get_option('freetype'),
     version: '>=2.12',
