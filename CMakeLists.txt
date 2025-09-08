@@ -6,9 +6,11 @@ set(PLUTOSVG_VERSION_MICRO 7)
 
 project(plutosvg LANGUAGES C VERSION ${PLUTOSVG_VERSION_MAJOR}.${PLUTOSVG_VERSION_MINOR}.${PLUTOSVG_VERSION_MICRO})
 
-find_package(plutovg 1.0.0 QUIET)
-if(NOT plutovg_FOUND)
-    add_subdirectory(plutovg)
+if (NOT TARGET plutovg::plutovg)
+    find_package(plutovg 1.0.0 QUIET)
+    if(NOT plutovg_FOUND)
+        add_subdirectory(plutovg)
+    endif()
 endif()
 
 set(plutosvg_sources
