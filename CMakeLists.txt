@@ -53,6 +53,10 @@ if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(plutosvg PUBLIC PLUTOSVG_BUILD_STATIC)
 endif()
 
+if(MSVC OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+    target_compile_definitions(plutosvg PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
 option(PLUTOSVG_ENABLE_FREETYPE "Enable Freetype integration" OFF)
 if(PLUTOSVG_ENABLE_FREETYPE)
     find_package(Freetype 2.12 REQUIRED)
