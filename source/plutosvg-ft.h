@@ -58,6 +58,11 @@
 #ifndef PLUTOSVG_FT_H
 #define PLUTOSVG_FT_H
 
+#if _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4996)
+#endif
+
 #include "plutosvg.h"
 
 #include <stdlib.h>
@@ -288,5 +293,9 @@ static SVG_RendererHooks plutosvg_ft_hooks = {
     (SVG_Lib_Render_Func)plutosvg_ft_render,
     (SVG_Lib_Preset_Slot_Func)plutosvg_ft_preset_slot
 };
+
+#if _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // PLUTOSVG_FT_H
