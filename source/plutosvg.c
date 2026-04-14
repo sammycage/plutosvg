@@ -1352,9 +1352,6 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
             const char* begin = it++;
             while(it < end && IS_NAMECHAR(*it))
                 ++it;
-            skip_ws(&it, end);
-            if(it >= end || *it != '>')
-                goto error;
             if(ignoring == 0) {
                 int id = elementid(begin, it - begin);
                 if(id != current->id)
@@ -1364,6 +1361,9 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
                 --ignoring;
             }
 
+            skip_ws(&it, end);
+            if(it >= end || *it != '>')
+                goto error;
             ++it;
             continue;
         }
