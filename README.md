@@ -64,7 +64,7 @@ int main(void)
 
 ## Installation
 
-Follow the steps below to install PlutoSVG using [Homebrew](https://brew.sh), [Meson](https://mesonbuild.com/) or [CMake](https://cmake.org/).
+Follow the steps below to install PlutoSVG using [Homebrew](https://brew.sh), [Meson](https://mesonbuild.com/), or [CMake](https://cmake.org/).
 
 ### Homebrew
 
