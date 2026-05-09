@@ -64,9 +64,15 @@ int main(void)
 
 ## Installation
 
-Follow the steps below to install PlutoSVG using either [Meson](https://mesonbuild.com/) or [CMake](https://cmake.org/).
+Follow the steps below to install PlutoSVG using [Homebrew](https://brew.sh), [Meson](https://mesonbuild.com/) or [CMake](https://cmake.org/).
 
-### Using Meson
+### Homebrew
+
+```bash
+brew install plutosvg
+```
+
+### Meson
 
 ```bash
 git clone https://github.com/sammycage/plutosvg.git
@@ -76,7 +82,7 @@ meson compile -C build
 meson install -C build
 ```
 
-### Using CMake
+### CMake
 
 ```bash
 git clone --recursive https://github.com/sammycage/plutosvg.git
