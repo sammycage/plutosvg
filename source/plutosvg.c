@@ -1510,6 +1510,8 @@ typedef enum render_mode {
     render_mode_bounding
 } render_mode_t;
 
+#define MAX_RENDER_DEPTH 256
+
 typedef struct render_state {
     struct render_state* parent;
     const element_t* element;
@@ -1521,6 +1523,7 @@ typedef struct render_state {
 
     plutovg_matrix_t matrix;
     plutovg_rect_t extents;
+    int depth;
 } render_state_t;
 
 #define INVALID_RECT PLUTOVG_MAKE_RECT(0, 0, -1, -1)
@@ -1532,6 +1535,7 @@ static void render_state_begin(const element_t* element, render_state_t* state, 
 {
     state->parent = parent;
     state->element = element;
+    state->depth = parent->depth + 1;
     state->mode = parent->mode;
     state->opacity = parent->opacity;
     state->matrix = parent->matrix;
@@ -2544,6 +2548,8 @@ static void render_element(const element_t* element, const render_context_t* con
 static void render_children(const element_t* element, const render_context_t* context, render_state_t* state)
 {
     const element_t* child = element->first_child;
+    if(state->depth >= MAX_RENDER_DEPTH)
+        return;
     while(child) {
         render_element(child, context, state);
         child = child->next_sibling;
@@ -2554,6 +2560,7 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
 {
     render_state_t state;
     state.parent = NULL;
+    state.depth = 0;
     state.mode = render_mode_painting;
     state.opacity = 1.f;
     state.extents = INVALID_RECT;
@@ -2621,6 +2628,7 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
 {
     render_state_t state;
     state.parent = NULL;
+    state.depth = 0;
     state.mode = render_mode_bounding;
     state.opacity = 1.f;
     state.extents = INVALID_RECT;
