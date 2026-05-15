@@ -2427,7 +2427,7 @@ static plutovg_surface_t* load_image(const element_t* element)
 {
     const string_t* value = find_attribute(element, ATTR_HREF, false);
     if(value == NULL)
-        return false;
+        return NULL;
     const char* it = value->data;
     const char* end = it + value->length;
     if(!skip_string(&it, end, "data:image/png")
