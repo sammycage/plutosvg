@@ -1531,7 +1531,6 @@ typedef struct render_state {
 
     plutovg_matrix_t matrix;
     plutovg_rect_t extents;
-    int depth;
 } render_state_t;
 
 #define INVALID_RECT PLUTOVG_MAKE_RECT(0, 0, -1, -1)
@@ -1544,7 +1543,6 @@ static void render_state_begin(const element_t* element, render_state_t* state, 
 {
     state->parent = parent;
     state->element = element;
-    state->depth = parent->depth + 1;
     state->mode = parent->mode;
     state->opacity = parent->opacity;
     state->matrix = parent->matrix;
@@ -1608,6 +1606,7 @@ typedef struct {
     const plutovg_color_t* current_color;
     plutosvg_palette_func_t palette_func;
     void* closure;
+    int depth;
 } render_context_t;
 
 static float resolve_length(const render_state_t* state, const length_t* length, char mode)
@@ -1651,7 +1650,7 @@ static plutovg_color_t convert_color(const color_t* color)
     return value;
 }
 
-static plutovg_color_t resolve_current_color(const render_context_t* context, const element_t* element)
+static plutovg_color_t resolve_current_color(render_context_t* context, const element_t* element)
 {
     color_t color = {color_type_current};
     parse_color(element, ATTR_COLOR, &color, true);
@@ -1666,7 +1665,7 @@ static plutovg_color_t resolve_current_color(const render_context_t* context, co
     return resolve_current_color(context, element->parent);
 }
 
-static plutovg_color_t resolve_color(const render_context_t* context, const element_t* element, const color_t* color)
+static plutovg_color_t resolve_color(render_context_t* context, const element_t* element, const color_t* color)
 {
     if(color->type == color_type_fixed)
         return convert_color(color);
@@ -1680,7 +1679,7 @@ typedef struct {
     size_t size;
 } gradient_stop_array_t;
 
-static void resolve_gradient_stops(const render_context_t* context, const element_t* element, gradient_stop_array_t* stops)
+static void resolve_gradient_stops(render_context_t* context, const element_t* element, gradient_stop_array_t* stops)
 {
     const element_t* child = element->first_child;
     while(child && stops->size < MAX_STOPS) {
@@ -1745,7 +1744,7 @@ static void fill_gradient_attributes(const element_t* element, gradient_attribut
     }
 }
 
-static void resolve_gradient_attributes(const render_context_t* context, const render_state_t* state, const gradient_attributes_t* attributes, units_type_t* units, plutovg_spread_method_t* spread, plutovg_matrix_t* transform, gradient_stop_array_t* stops)
+static void resolve_gradient_attributes(render_context_t* context, const render_state_t* state, const gradient_attributes_t* attributes, units_type_t* units, plutovg_spread_method_t* spread, plutovg_matrix_t* transform, gradient_stop_array_t* stops)
 {
     parse_units_type(attributes->units, ATTR_GRADIENT_UNITS, units);
     parse_spread_method(attributes->spread, ATTR_SPREAD_METHOD, spread);
@@ -1769,7 +1768,7 @@ typedef struct {
 
 #define MAX_GRADIENT_DEPTH 128
 
-static bool apply_linear_gradient(render_state_t* state, const render_context_t* context, const element_t* element)
+static bool apply_linear_gradient(render_state_t* state, render_context_t* context, const element_t* element)
 {
     linear_gradient_attributes_t attributes = {0};
     const element_t* current = element;
@@ -1835,7 +1834,7 @@ typedef struct {
     const element_t* fy;
 } radial_gradient_attributes_t;
 
-static bool apply_radial_gradient(render_state_t* state, const render_context_t* context, const element_t* element)
+static bool apply_radial_gradient(render_state_t* state, render_context_t* context, const element_t* element)
 {
     radial_gradient_attributes_t attributes = {0};
     const element_t* current = element;
@@ -1906,7 +1905,7 @@ static bool apply_radial_gradient(render_state_t* state, const render_context_t*
     return true;
 }
 
-static bool apply_paint(render_state_t* state, const render_context_t* context, const paint_t* paint)
+static bool apply_paint(render_state_t* state, render_context_t* context, const paint_t* paint)
 {
     if(paint->type == paint_type_none)
         return false;
@@ -1938,7 +1937,7 @@ static bool apply_paint(render_state_t* state, const render_context_t* context, 
     return false;
 }
 
-static void draw_shape(const element_t* element, const render_context_t* context, render_state_t* state)
+static void draw_shape(const element_t* element, render_context_t* context, render_state_t* state)
 {
     paint_t stroke = {paint_type_none};
     parse_paint(element, ATTR_STROKE, &stroke);
@@ -2033,8 +2032,8 @@ static bool is_visibility_hidden(const element_t* element)
     return visibility != visibility_visible;
 }
 
-static void render_element(const element_t* element, const render_context_t* context, render_state_t* state);
-static void render_children(const element_t* element, const render_context_t* context, render_state_t* state);
+static void render_element(const element_t* element, render_context_t* context, render_state_t* state);
+static void render_children(const element_t* element, render_context_t* context, render_state_t* state);
 
 static void apply_view_transform(render_state_t* state, float width, float height)
 {
@@ -2092,7 +2091,7 @@ static void apply_view_transform(render_state_t* state, float width, float heigh
     state->view_height = view_box.h;
 }
 
-static void render_symbol(const element_t* element, const render_context_t* context, render_state_t* state, float x, float y, float width, float height)
+static void render_symbol(const element_t* element, render_context_t* context, render_state_t* state, float x, float y, float width, float height)
 {
     if(width <= 0.f || height <= 0.f || is_display_none(element))
         return;
@@ -2108,7 +2107,7 @@ static void render_symbol(const element_t* element, const render_context_t* cont
     render_state_end(&new_state);
 }
 
-static void render_svg(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_svg(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(element->parent == NULL) {
         render_symbol(element, context, state, 0.f, 0.f, context->document->width, context->document->height);
@@ -2133,7 +2132,7 @@ static void render_svg(const element_t* element, const render_context_t* context
     render_symbol(element, context, state, _x, _y, _w, _h);
 }
 
-static void render_use(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_use(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || has_cycle_reference(state, element))
         return;
@@ -2165,7 +2164,7 @@ static void render_use(const element_t* element, const render_context_t* context
     render_state_end(&new_state);
 }
 
-static void render_g(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_g(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element))
         return;
@@ -2175,7 +2174,7 @@ static void render_g(const element_t* element, const render_context_t* context, 
     render_state_end(&new_state);
 }
 
-static void render_line(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_line(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2209,7 +2208,7 @@ static void render_line(const element_t* element, const render_context_t* contex
     render_state_end(&new_state);
 }
 
-static void render_ellipse(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_ellipse(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2245,7 +2244,7 @@ static void render_ellipse(const element_t* element, const render_context_t* con
     render_state_end(&new_state);
 }
 
-static void render_circle(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_circle(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2277,7 +2276,7 @@ static void render_circle(const element_t* element, const render_context_t* cont
     render_state_end(&new_state);
 }
 
-static void render_rect(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_rect(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2325,7 +2324,7 @@ static void render_rect(const element_t* element, const render_context_t* contex
     render_state_end(&new_state);
 }
 
-static void render_poly(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_poly(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2339,7 +2338,7 @@ static void render_poly(const element_t* element, const render_context_t* contex
     render_state_end(&new_state);
 }
 
-static void render_path(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_path(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2456,7 +2455,7 @@ static plutovg_surface_t* load_image(const element_t* element)
     return NULL;
 }
 
-static void draw_image(const element_t* element, const render_context_t* context, render_state_t* state, float x, float y, float width, float height)
+static void draw_image(const element_t* element, render_context_t* context, render_state_t* state, float x, float y, float width, float height)
 {
     if(state->mode == render_mode_bounding)
         return;
@@ -2486,7 +2485,7 @@ static void draw_image(const element_t* element, const render_context_t* context
     plutovg_surface_destroy(image);
 }
 
-static void render_image(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_image(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(is_display_none(element) || is_visibility_hidden(element))
         return;
@@ -2519,7 +2518,7 @@ static void render_image(const element_t* element, const render_context_t* conte
     render_state_end(&new_state);
 }
 
-static void render_element(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_element(const element_t* element, render_context_t* context, render_state_t* state)
 {
     switch(element->id) {
     case TAG_SVG:
@@ -2556,14 +2555,16 @@ static void render_element(const element_t* element, const render_context_t* con
     }
 }
 
-static void render_children(const element_t* element, const render_context_t* context, render_state_t* state)
+static void render_children(const element_t* element, render_context_t* context, render_state_t* state)
 {
-    const element_t* child = element->first_child;
-    if(state->depth >= MAX_RENDER_DEPTH)
-        return;
-    while(child) {
-        render_element(child, context, state);
-        child = child->next_sibling;
+    if(context->depth < MAX_RENDER_DEPTH) {
+        const element_t* child = element->first_child;
+        while(child) {
+            context->depth++;
+            render_element(child, context, state);
+            context->depth--;
+            child = child->next_sibling;
+        }
     }
 }
 
@@ -2571,7 +2572,6 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
 {
     render_state_t state;
     state.parent = NULL;
-    state.depth = 0;
     state.mode = render_mode_painting;
     state.opacity = 1.f;
     state.extents = INVALID_RECT;
@@ -2588,7 +2588,7 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
         state.element = element;
     }
 
-    render_context_t context = {document, canvas, current_color, palette_func, closure};
+    render_context_t context = {document, canvas, current_color, palette_func, closure, 0};
     render_element(state.element, &context, &state);
     return true;
 }
@@ -2639,7 +2639,6 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
 {
     render_state_t state;
     state.parent = NULL;
-    state.depth = 0;
     state.mode = render_mode_bounding;
     state.opacity = 1.f;
     state.extents = INVALID_RECT;
@@ -2659,7 +2658,7 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
         state.element = element;
     }
 
-    render_context_t context = {document, NULL, NULL, NULL, NULL};
+    render_context_t context = {document, NULL, NULL, NULL, NULL, 0};
     render_element(state.element, &context, &state);
     if(IS_INVALID_RECT(state.extents)) {
         *extents = EMPTY_RECT;
