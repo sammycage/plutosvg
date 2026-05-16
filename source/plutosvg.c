@@ -90,6 +90,7 @@ enum {
 };
 
 #define MAX_NAME 19
+
 typedef struct {
     const char* name;
     int id;
@@ -264,6 +265,7 @@ static heap_t* heap_create(void)
 
 #define CHUNK_SIZE 4096
 #define ALIGN_SIZE(size) (((size) + 7ul) & ~7ul)
+
 static void* heap_alloc(heap_t* heap, size_t size)
 {
     size = ALIGN_SIZE(size);
@@ -445,6 +447,9 @@ static inline bool has_attribute(const element_t* element, int id)
 }
 
 #define IS_NUM(c) ((c) >= '0' && (c) <= '9')
+#define IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
+#define IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
+
 static inline bool parse_float(const char** begin, const char* end, float* number)
 {
     const char* it = *begin;
@@ -543,7 +548,6 @@ static inline bool skip_delim(const char** begin, const char* end, const char de
     return false;
 }
 
-#define IS_WS(c) ((c) == ' ' || (c) == '\t' || (c) == '\n' || (c) == '\r')
 static inline bool skip_ws(const char** begin, const char* end)
 {
     const char* it = *begin;
@@ -583,6 +587,7 @@ static inline const char* rtrim(const char* begin, const char* end)
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(v, lo, hi) ((v) < (lo) ? (lo) : (hi) < (v) ? (hi) : (v))
+
 static bool parse_number(const element_t* element, int id, float* number, bool percent, bool inherit)
 {
     const string_t* value = find_attribute(element, id, inherit);
@@ -614,6 +619,7 @@ typedef struct {
 
 #define is_length_zero(length) ((length).value == 0)
 #define is_length_valid(length) ((length).type != length_type_unknown)
+
 static bool parse_length_value(const char** begin, const char* end, length_t* length, bool negative)
 {
     float value = 0;
@@ -785,9 +791,9 @@ static bool parse_url_value(const char** begin, const char* end, string_t* id)
     return true;
 }
 
-#define IS_ALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
 #define IS_STARTNAMECHAR(c) (IS_ALPHA(c) ||  (c) == '_' || (c) == ':')
 #define IS_NAMECHAR(c) (IS_STARTNAMECHAR(c) || IS_NUM(c) || (c) == '-' || (c) == '.')
+
 static bool parse_paint(const element_t* element, int id, paint_t* paint)
 {
     const string_t* value = find_attribute(element, id, true);
@@ -988,6 +994,7 @@ static bool parse_path(const element_t* element, int id, plutovg_path_t* path)
 }
 
 #define MAX_DASHES 128
+
 typedef struct {
     length_t data[MAX_DASHES];
     size_t size;
@@ -1181,6 +1188,7 @@ static void add_attribute(element_t* element, plutosvg_document_t* document, int
 
 #define IS_CSS_STARTNAMECHAR(c) (IS_ALPHA(c) || c == '_')
 #define IS_CSS_NAMECHAR(c) (IS_CSS_STARTNAMECHAR(c) || IS_NUM(c) || c == '-')
+
 static void parse_style(const char* data, int length, element_t* element, plutosvg_document_t* document)
 {
     const char* it = data;
@@ -1531,6 +1539,7 @@ typedef struct render_state {
 
 #define IS_INVALID_RECT(rect) ((rect).w < 0 || (rect).h < 0)
 #define IS_EMPTY_RECT(rect) ((rect).w <= 0 || (rect).h <= 0)
+
 static void render_state_begin(const element_t* element, render_state_t* state, render_state_t* parent)
 {
     state->parent = parent;
@@ -1665,6 +1674,7 @@ static plutovg_color_t resolve_color(const render_context_t* context, const elem
 }
 
 #define MAX_STOPS 64
+
 typedef struct {
     plutovg_gradient_stop_t data[MAX_STOPS];
     size_t size;
@@ -1758,6 +1768,7 @@ typedef struct {
 } linear_gradient_attributes_t;
 
 #define MAX_GRADIENT_DEPTH 128
+
 static bool apply_linear_gradient(render_state_t* state, const render_context_t* context, const element_t* element)
 {
     linear_gradient_attributes_t attributes = {0};
@@ -2669,8 +2680,10 @@ const void* plutosvg_ft_svg_hooks(void)
 }
 
 #else
+
 const void* plutosvg_ft_svg_hooks(void)
 {
     return NULL;
 }
+
 #endif // PLUTOSVG_HAS_FREETYPE
