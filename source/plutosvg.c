@@ -1480,35 +1480,48 @@ error:
     return NULL;
 }
 
+static bool plutosvg_load_file(const char* filename, char** data, long* length)
+{
+    FILE* stream = fopen(filename, "rb");
+    if(stream == NULL) {
+        return false;
+    }
+
+    char* content = NULL;
+    bool success = false;
+
+    fseek(stream, 0, SEEK_END);
+    long size = ftell(stream);
+    if(size == -1L) {
+        goto cleanup;
+    }
+
+    content = malloc(size);
+    if(content == NULL) {
+        goto cleanup;
+    }
+
+    fseek(stream, 0, SEEK_SET);
+    if(fread(content, 1, size, stream) == size) {
+        *data = content;
+        *length = size;
+
+        content = NULL;
+        success = true;
+    }
+
+cleanup:
+    fclose(stream);
+    free(content);
+    return success;
+}
+
 plutosvg_document_t* plutosvg_document_load_from_file(const char* filename, float width, float height)
 {
-    FILE* fp = fopen(filename, "rb");
-    if(fp == NULL) {
+    char* data = NULL;
+    long length = 0L;
+    if(!plutosvg_load_file(filename, &data, &length))
         return NULL;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long length = ftell(fp);
-    if(length == -1L) {
-        fclose(fp);
-        return NULL;
-    }
-
-    void* data = malloc(length);
-    if(data == NULL) {
-        fclose(fp);
-        return NULL;
-    }
-
-    fseek(fp, 0, SEEK_SET);
-    size_t nread = fread(data, 1, length, fp);
-    fclose(fp);
-
-    if(nread != length) {
-        free(data);
-        return NULL;
-    }
-
     return plutosvg_document_load_from_data(data, length, width, height, free, data);
 }
 
