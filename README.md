@@ -93,3 +93,4 @@ cmake --install build
 - [Dear ImGui](https://github.com/ocornut/imgui)
 - [SDL_ttf](https://github.com/libsdl-org/SDL_ttf)
 - [PCSX2](https://github.com/PCSX2/pcsx2)
+- [FastChart](https://github.com/iliaal/fastchart)
