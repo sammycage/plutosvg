@@ -1518,8 +1518,6 @@ typedef enum render_mode {
     render_mode_bounding
 } render_mode_t;
 
-#define MAX_RENDER_DEPTH 256
-
 typedef struct render_state {
     struct render_state* parent;
     const element_t* element;
@@ -1802,8 +1800,9 @@ static bool apply_linear_gradient(render_state_t* state, render_context_t* conte
 
     units_type_t units = units_type_object_bounding_box;
     plutovg_spread_method_t spread = PLUTOVG_SPREAD_METHOD_PAD;
-    plutovg_matrix_t transform = {1, 0, 0, 1, 0, 0};
+    plutovg_matrix_t transform = PLUTOVG_IDENTITY_MATRIX;
     gradient_stop_array_t stops = {0};
+
     resolve_gradient_attributes(context, state, &attributes.base, &units, &spread, &transform, &stops);
 
     length_t x1 = {0, length_type_fixed};
@@ -1869,8 +1868,9 @@ static bool apply_radial_gradient(render_state_t* state, render_context_t* conte
 
     units_type_t units = units_type_object_bounding_box;
     plutovg_spread_method_t spread = PLUTOVG_SPREAD_METHOD_PAD;
-    plutovg_matrix_t transform = {1, 0, 0, 1, 0, 0};
+    plutovg_matrix_t transform = PLUTOVG_IDENTITY_MATRIX;
     gradient_stop_array_t stops = {0};
+
     resolve_gradient_attributes(context, state, &attributes.base, &units, &spread, &transform, &stops);
 
     length_t cx = {50, length_type_percent};
@@ -1917,7 +1917,7 @@ static bool apply_paint(render_state_t* state, render_context_t* context, const 
 
     if(paint->type == paint_type_var) {
         plutovg_color_t color;
-        if(!context->palette_func || !context->palette_func(context->closure, paint->id.data, paint->id.length, &color))
+        if(context->palette_func == NULL || !context->palette_func(context->closure, paint->id.data, paint->id.length, &color))
             color = resolve_color(context, state->element, &paint->color);
         plutovg_canvas_set_color(context->canvas, &color);
         return true;
@@ -2554,6 +2554,8 @@ static void render_element(const element_t* element, render_context_t* context, 
         break;
     }
 }
+
+#define MAX_RENDER_DEPTH 256
 
 static void render_children(const element_t* element, render_context_t* context, render_state_t* state)
 {
