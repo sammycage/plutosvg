@@ -1,12 +1,29 @@
 #include <plutosvg.h>
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+
+static const char* basename(const char* path)
+{
+    const char* slash1 = strrchr(path, '/');
+    const char* slash2 = strrchr(path, '\\');
+    const char* last_slash = slash1 > slash2 ? slash1 : slash2;
+
+    return last_slash ? last_slash + 1 : path;
+}
 
 static double elapsed_time(clock_t start, clock_t end)
 {
     return ((double)(end - start)) / CLOCKS_PER_SEC;
 }
+
+#define TIMED(label, path, expression) do { \
+    clock_t start = clock(); \
+    expression; \
+    clock_t end = clock(); \
+    fprintf(stdout, "Finished %s '%s' in %.3f seconds\n", label, basename(path), elapsed_time(start, end)); \
+} while(0)
 
 int main(int argc, char* argv[])
 {
@@ -24,38 +41,24 @@ int main(int argc, char* argv[])
 
     plutosvg_document_t* document = NULL;
     plutovg_surface_t* surface = NULL;
-    clock_t start, end;
 
-    start = clock();
-    document = plutosvg_document_load_from_file(input, -1, -1);
-    end = clock();
-
+    TIMED("loading", input, document = plutosvg_document_load_from_file(input, -1, -1));
     if(document == NULL) {
         fprintf(stderr, "Unable to load '%s'\n", input);
         goto cleanup;
     }
 
-    fprintf(stdout, "Finished loading '%s' in %.3f seconds\n", input, elapsed_time(start, end));
-
-    start = clock();
-    surface = plutosvg_document_render_to_surface(document, id, -1, -1, NULL, NULL, NULL);
-    end = clock();
-
+    TIMED("rendering", input, surface = plutosvg_document_render_to_surface(document, id, -1, -1, NULL, NULL, NULL));
     if(surface == NULL) {
         fprintf(stderr, "Unable to render '%s'\n", input);
         goto cleanup;
     }
 
-    fprintf(stdout, "Finished rendering '%s' in %.3f seconds\n", input, elapsed_time(start, end));
-
-    start = clock();
-    if(!plutovg_surface_write_to_png(surface, output)) {
+    TIMED("writing", output, if(!plutovg_surface_write_to_png(surface, output)) {
         fprintf(stderr, "Unable to write '%s'\n", output);
         goto cleanup;
-    }
-    end = clock();
+    });
 
-    fprintf(stdout, "Finished writing '%s' in %.3f seconds\n", output, elapsed_time(start, end));
 cleanup:
     plutovg_surface_destroy(surface);
     plutosvg_document_destroy(document);
