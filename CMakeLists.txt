@@ -6,10 +6,17 @@ set(PLUTOSVG_VERSION_MICRO 8)
 
 project(plutosvg LANGUAGES C VERSION ${PLUTOSVG_VERSION_MAJOR}.${PLUTOSVG_VERSION_MINOR}.${PLUTOSVG_VERSION_MICRO})
 
+include(FetchContent)
+
 if (NOT TARGET plutovg::plutovg)
     find_package(plutovg 1.0.0 QUIET)
     if(NOT plutovg_FOUND)
-        add_subdirectory(plutovg)
+        #add_subdirectory(plutovg)
+		FetchContent_Declare(plutovg
+			URL https://github.com/sammycage/plutovg/archive/refs/tags/v1.3.3.tar.gz
+			URL_MD5 f2e4919f4034cf62f8c84ddf1aab5c8d
+		)
+		FetchContent_MakeAvailable(plutovg)
     endif()
 endif()
 
