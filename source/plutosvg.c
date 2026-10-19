@@ -1618,7 +1618,22 @@ typedef struct {
     plutosvg_palette_func_t palette_func;
     void* closure;
     int depth;
+    int use_depth;
+    size_t use_visits;
+    size_t use_bytes;
 } render_context_t;
+
+/*
+ * <use> re-renders the referenced subtree, so a chain of uses recurses once
+ * per link and nested fan-out multiplies per level. MAX_RENDER_DEPTH also
+ * counts <use> hops. Under any <use>, MAX_USE_VISITS caps element visits and
+ * MAX_USE_BYTES caps the attribute bytes those visits re-render, since an
+ * element's cost tracks its geometry data. href is not charged: it names a
+ * referenced element or an image. Elements outside a <use> are not charged.
+ */
+#define MAX_RENDER_DEPTH 256
+#define MAX_USE_VISITS ((size_t)1 << 20)
+#define MAX_USE_BYTES ((size_t)1 << 23)
 
 static float resolve_length(const render_state_t* state, const length_t* length, char mode)
 {
@@ -2147,11 +2162,19 @@ static void render_svg(const element_t* element, render_context_t* context, rend
 
 static void render_use(const element_t* element, render_context_t* context, render_state_t* state)
 {
+    if(context->depth >= MAX_RENDER_DEPTH)
+        return;
     if(is_display_none(element) || has_cycle_reference(state, element))
         return;
     element_t* ref = resolve_href(context->document, element);
     if(ref == NULL)
         return;
+    for(const element_t* ancestor = element; ancestor; ancestor = ancestor->parent) {
+        if(ancestor == ref) {
+            return;
+        }
+    }
+
     length_t x = {0, length_type_fixed};
     length_t y = {0, length_type_fixed};
 
@@ -2167,12 +2190,16 @@ static void render_use(const element_t* element, render_context_t* context, rend
 
     const element_t* parent = ref->parent;
     ref->parent = (element_t*)(element);
+    context->depth++;
+    context->use_depth++;
     if(ref->id == TAG_SVG || ref->id == TAG_SYMBOL) {
         render_svg(ref, context, &new_state);
     } else {
         render_element(ref, context, &new_state);
     }
 
+    context->use_depth--;
+    context->depth--;
     ref->parent = (element_t*)(parent);
     render_state_end(&new_state);
 }
@@ -2533,6 +2560,23 @@ static void render_image(const element_t* element, render_context_t* context, re
 
 static void render_element(const element_t* element, render_context_t* context, render_state_t* state)
 {
+    if(context->use_depth > 0) {
+        size_t bytes = 0;
+        for(const attribute_t* attribute = element->attributes; attribute; attribute = attribute->next) {
+            if(attribute->id != ATTR_HREF) {
+                bytes += attribute->value.length;
+            }
+        }
+
+        if(context->use_visits >= MAX_USE_VISITS || bytes > MAX_USE_BYTES - context->use_bytes) {
+            context->use_visits = SIZE_MAX;
+            return;
+        }
+
+        context->use_visits++;
+        context->use_bytes += bytes;
+    }
+
     switch(element->id) {
     case TAG_SVG:
         render_svg(element, context, state);
@@ -2568,8 +2612,6 @@ static void render_element(const element_t* element, render_context_t* context, 
     }
 }
 
-#define MAX_RENDER_DEPTH 256
-
 static void render_children(const element_t* element, render_context_t* context, render_state_t* state)
 {
     if(context->depth < MAX_RENDER_DEPTH) {
@@ -2603,9 +2645,9 @@ bool plutosvg_document_render(const plutosvg_document_t* document, const char* i
         state.element = element;
     }
 
-    render_context_t context = {document, canvas, current_color, palette_func, closure, 0};
+    render_context_t context = {document, canvas, current_color, palette_func, closure, 0, 0, 0, 0};
     render_element(state.element, &context, &state);
-    return true;
+    return context.use_visits != SIZE_MAX;
 }
 
 plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height, const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure)
@@ -2673,15 +2715,15 @@ bool plutosvg_document_extents(const plutosvg_document_t* document, const char* 
         state.element = element;
     }
 
-    render_context_t context = {document, NULL, NULL, NULL, NULL, 0};
+    render_context_t context = {document, NULL, NULL, NULL, NULL, 0, 0, 0, 0};
     render_element(state.element, &context, &state);
-    if(IS_INVALID_RECT(state.extents)) {
+    if(context.use_visits == SIZE_MAX || IS_INVALID_RECT(state.extents)) {
         *extents = EMPTY_RECT;
     } else {
         *extents = state.extents;
     }
 
-    return true;
+    return context.use_visits != SIZE_MAX;
 }
 
 #ifdef PLUTOSVG_HAS_FREETYPE

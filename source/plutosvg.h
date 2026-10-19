@@ -122,6 +122,9 @@ PLUTOSVG_API plutosvg_document_t* plutosvg_document_load_from_file(const char* f
  * @param palette_func Callback function for resolving CSS color variables.
  * @param closure User-defined data passed to the `palette_func` callback.
  * @return `true` if rendering was successful; `false` otherwise.
+ *
+ * @note Also returns `false` when `<use>` expansion exceeds the render budget;
+ * the canvas then holds a partial rendering.
  */
 PLUTOSVG_API bool plutosvg_document_render(const plutosvg_document_t* document, const char* id, plutovg_canvas_t* canvas,
     const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
@@ -137,6 +140,8 @@ PLUTOSVG_API bool plutosvg_document_render(const plutosvg_document_t* document, 
  * @param palette_func Callback function for resolving CSS color variables.
  * @param closure User-defined data passed to the `palette_func` callback.
  * @return Pointer to the rendered `plutovg_surface_t` object, or `NULL` if rendering fails.
+ *
+ * @note Returns `NULL` when `<use>` expansion exceeds the render budget.
  */
 PLUTOSVG_API plutovg_surface_t* plutosvg_document_render_to_surface(const plutosvg_document_t* document, const char* id, int width, int height,
     const plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
@@ -166,6 +171,9 @@ PLUTOSVG_API float plutosvg_document_get_height(const plutosvg_document_t* docum
  * @param id ID of the element whose extents to retrieve, or `NULL` to retrieve the extents of the entire document.
  * @param extents Pointer to a `plutovg_rect_t` object where the extents will be stored.
  * @return `true` if the extents were successfully retrieved; `false` otherwise.
+ *
+ * @note Also returns `false`, with empty extents, when `<use>` expansion exceeds
+ * the render budget.
  */
 PLUTOSVG_API bool plutosvg_document_extents(const plutosvg_document_t* document, const char* id, plutovg_rect_t* extents);
 
