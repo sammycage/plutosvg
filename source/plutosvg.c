@@ -1178,6 +1178,14 @@ void plutosvg_document_destroy(plutosvg_document_t* document)
 
 static void add_attribute(element_t* element, plutosvg_document_t* document, int id, const char* data, size_t length)
 {
+    for(attribute_t* existing = element->attributes; existing; existing = existing->next) {
+        if(existing->id == id) {
+            existing->value.data = data;
+            existing->value.length = length;
+            return;
+        }
+    }
+
     attribute_t* attribute = heap_alloc(document->heap, sizeof(attribute_t));
     attribute->id = id;
     attribute->value.data = data;
