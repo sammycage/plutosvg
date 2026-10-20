@@ -243,6 +243,9 @@ typedef struct element {
     struct element* last_child;
     struct element* first_child;
     struct element* next_sibling;
+    struct element* first_stop;
+    struct element* last_stop;
+    struct element* next_stop;
     struct attribute* attributes;
 } element_t;
 
@@ -1397,6 +1400,9 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
                 element->next_sibling = NULL;
                 element->first_child = NULL;
                 element->last_child = NULL;
+                element->first_stop = NULL;
+                element->last_stop = NULL;
+                element->next_stop = NULL;
                 element->attributes = NULL;
                 if(document->root_element == NULL) {
                     if(element->id != TAG_SVG)
@@ -1410,6 +1416,15 @@ plutosvg_document_t* plutosvg_document_load_from_data(const char* data, int leng
                     } else {
                         current->last_child = element;
                         current->first_child = element;
+                    }
+
+                    if(element->id == TAG_STOP) {
+                        if(current->last_stop) {
+                            current->last_stop->next_stop = element;
+                        } else {
+                            current->first_stop = element;
+                        }
+                        current->last_stop = element;
                     }
                 }
             }
@@ -1692,24 +1707,21 @@ typedef struct {
 
 static void resolve_gradient_stops(render_context_t* context, const element_t* element, gradient_stop_array_t* stops)
 {
-    const element_t* child = element->first_child;
+    const element_t* child = element->first_stop;
     while(child && stops->size < MAX_STOPS) {
-        if(child->id == TAG_STOP) {
-            float offset = 0.f;
-            float stop_opacity = 1.f;
-            color_t stop_color = {color_type_fixed, 0xFF000000};
+        float offset = 0.f;
+        float stop_opacity = 1.f;
+        color_t stop_color = {color_type_fixed, 0xFF000000};
 
-            parse_number(child, ATTR_OFFSET, &offset, true, false);
-            parse_number(child, ATTR_STOP_OPACITY, &stop_opacity, true, false);
-            parse_color(child, ATTR_STOP_COLOR, &stop_color, false);
+        parse_number(child, ATTR_OFFSET, &offset, true, false);
+        parse_number(child, ATTR_STOP_OPACITY, &stop_opacity, true, false);
+        parse_color(child, ATTR_STOP_COLOR, &stop_color, false);
 
-            stops->data[stops->size].offset = offset;
-            stops->data[stops->size].color = resolve_color(context, child, &stop_color);
-            stops->data[stops->size].color.a *= stop_opacity;
-            stops->size += 1;
-        }
-
-        child = child->next_sibling;
+        stops->data[stops->size].offset = offset;
+        stops->data[stops->size].color = resolve_color(context, child, &stop_color);
+        stops->data[stops->size].color.a *= stop_opacity;
+        stops->size += 1;
+        child = child->next_stop;
     }
 }
 
@@ -1735,13 +1747,8 @@ static void collect_gradient_attributes(const element_t* element, gradient_attri
         attributes->spread = element;
     if(attributes->transform == NULL && has_attribute(element, ATTR_GRADIENT_TRANSFORM))
         attributes->transform = element;
-    if(attributes->stops == NULL) {
-        for(const element_t* child = element->first_child; child; child = child->next_sibling) {
-            if(child->id == TAG_STOP) {
-                attributes->stops = element;
-                break;
-            }
-        }
+    if(attributes->stops == NULL && element->first_stop) {
+        attributes->stops = element;
     }
 }
 
